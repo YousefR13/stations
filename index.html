@@ -11,165 +11,329 @@
 <style>
 :root{
   --bg:#f4f6f8; --card:#ffffff; --ink:#14202b; --muted:#66727e; --line:#e3e7eb;
-  --brand:#0b6e4f; --brand-ink:#ffffff; --near:#e8f5ef; --warn:#b54708; --warn-bg:#fff4e5;
+  --brand:#0b6e4f; --brand-ink:#ffffff; --near:#e8f5ef;
+  --amber:#b45309; --amber-bg:#fff4e0; --done:#8a96a1; --danger:#b42318; --danger-bg:#fdecea;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a;
-    --brand:#2fb383; --brand-ink:#06140e; --near:#13281f; --warn:#f5a35b; --warn-bg:#2a1d10;
+    --brand:#2fb383; --brand-ink:#06140e; --near:#13281f;
+    --amber:#f5a35b; --amber-bg:#2a1d10; --done:#6b7782; --danger:#f97066; --danger-bg:#2c1513;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a;
-  --brand:#2fb383; --brand-ink:#06140e; --near:#13281f; --warn:#f5a35b; --warn-bg:#2a1d10;
+  --brand:#2fb383; --brand-ink:#06140e; --near:#13281f;
+  --amber:#f5a35b; --amber-bg:#2a1d10; --done:#6b7782; --danger:#f97066; --danger-bg:#2c1513;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);
-  font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
-  -webkit-text-size-adjust:100%}
+  font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;-webkit-text-size-adjust:100%}
+button,input,textarea{font:inherit}
 header{position:sticky;top:0;z-index:1000;background:var(--card);border-bottom:1px solid var(--line);
-  padding:12px 16px calc(10px) ;padding-top:max(12px,env(safe-area-inset-top))}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
-h1{font-size:18px;margin:0;font-weight:700}
-.count{font-size:13px;color:var(--muted)}
-.status{margin-top:8px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  padding:12px 16px 10px;padding-top:max(12px,env(safe-area-inset-top))}
+.top{display:flex;align-items:center;gap:10px}
+h1{font-size:18px;margin:0;font-weight:700;flex:1}
+.icon-btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;
+  padding:6px 10px;font-size:14px;cursor:pointer}
+.sub{margin-top:6px;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
-.status.ok .dot{background:var(--brand)}
-.status.bad{color:var(--warn)} .status.bad .dot{background:var(--warn)}
-.search{margin-top:10px;width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;
-  border:1px solid var(--line);background:var(--bg);color:var(--ink)}
-#map{height:38vh;min-height:220px;background:var(--line)}
-main{padding:12px 16px 32px;max-width:720px;margin:0 auto}
-.empty{padding:40px 8px;text-align:center;color:var(--muted);line-height:1.8}
+.sub.ok .dot{background:var(--brand)} .sub.bad{color:var(--amber)} .sub.bad .dot{background:var(--amber)}
+.progress{height:6px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--brand);transition:width .3s}
+#map{height:34vh;min-height:200px;background:var(--line)}
+main{padding:12px 16px 40px;max-width:720px;margin:0 auto}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.panel h2{font-size:15px;margin:0 0 8px}
+textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:10px;padding:10px;
+  background:var(--bg);color:var(--ink);font-size:16px;resize:vertical;direction:ltr;text-align:right}
+.row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.msg{font-size:13px;color:var(--muted);line-height:1.7}
 ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-li{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;
-  display:flex;align-items:center;gap:12px}
+li{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 li.first{background:var(--near);border-color:var(--brand)}
+li.claimed{border-color:var(--amber)}
+li.done{opacity:.75}
+.head{display:flex;align-items:center;gap:12px}
 .rank{width:30px;height:30px;border-radius:50%;background:var(--bg);display:grid;place-items:center;
   font-size:13px;font-weight:600;color:var(--muted);flex:none}
 li.first .rank{background:var(--brand);color:var(--brand-ink)}
+li.done .rank{background:var(--done);color:#fff}
 .info{flex:1;min-width:0}
-.num{font-size:19px;font-weight:700;letter-spacing:.3px;direction:ltr;text-align:right;cursor:pointer}
-.dist{font-size:13px;color:var(--muted);margin-top:2px}
-.go{flex:none;text-decoration:none;background:var(--brand);color:var(--brand-ink);font-weight:600;
-  font-size:15px;padding:10px 14px;border-radius:10px;white-space:nowrap}
-.go:active{opacity:.85}
+.num{font-size:19px;font-weight:700;direction:ltr;text-align:right;cursor:pointer}
+li.done .num{text-decoration:line-through;text-decoration-thickness:1px}
+.meta{font-size:13px;color:var(--muted);margin-top:2px}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;margin-top:4px}
+.tag.amber{background:var(--amber-bg);color:var(--amber)}
+.tag.ok{background:var(--near);color:var(--brand)}
+.actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.amber{background:var(--amber-bg);color:var(--amber)}
+.btn.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--danger-bg);color:var(--danger)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.grow{flex:1}
+details{margin-top:16px}
+summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
+.empty{padding:28px 8px;text-align:center;color:var(--muted);line-height:1.8}
 .note{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
+.toast{position:fixed;left:16px;right:16px;bottom:max(16px,env(safe-area-inset-bottom));z-index:2000;
+  background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;font-size:14px;
+  text-align:center;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.modal{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px}
+.modal[hidden]{display:none}
+.modal .box{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:360px}
+.modal h3{margin:0 0 6px;font-size:17px}
+.modal p{margin:0 0 12px;font-size:13px;color:var(--muted)}
+.modal input{width:100%;font-size:17px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--bg);color:var(--ink)}
 .leaflet-container{font-family:inherit}
-.pin{background:var(--brand);border:2px solid #fff;border-radius:50%;width:14px;height:14px;
-  box-shadow:0 1px 3px rgba(0,0,0,.35);transform:translate(-50%,-50%);display:block;font-size:0}
+.pin{border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 1px 3px rgba(0,0,0,.35);
+  transform:translate(-50%,-50%);display:block;font-size:0;background:var(--brand);color:var(--brand-ink)}
+.pin.claimed{background:#d97706;color:#fff} .pin.done{background:#9aa5af;color:#fff}
 .labels .pin{width:auto;height:auto;border-radius:12px;font-size:11px;font-weight:700;padding:1px 6px;
-  white-space:nowrap;display:inline-block;color:var(--brand-ink)}
-.me{width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;
-  box-shadow:0 0 0 6px rgba(26,115,232,.25)}
+  white-space:nowrap;display:inline-block}
+.me{width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)}
 </style>
 </head>
 <body>
 <header>
   <div class="top">
-    <h1 id="title">محطات المهمة</h1>
-    <span class="count" id="count"></span>
+    <h1>محطات المهمة</h1>
+    <button class="icon-btn" id="refresh" title="تحديث">↻ تحديث</button>
+    <button class="icon-btn" id="who"></button>
   </div>
-  <div class="status" id="status"><span class="dot"></span><span id="statusText">جارِ تحديد موقعك…</span></div>
-  <input class="search" id="q" type="search" inputmode="numeric" placeholder="ابحث برقم المحطة">
+  <div class="sub" id="status"><span class="dot"></span><span id="statusText">جارِ تحديد موقعك…</span></div>
+  <div class="sub" id="counts"></div>
+  <div class="progress"><span id="bar" style="width:0"></span></div>
 </header>
 <div id="map"></div>
 <main>
+  <section class="panel" id="admin" hidden>
+    <h2>إضافة محطات (المشرف)</h2>
+    <textarea id="nums" inputmode="numeric" placeholder="اكتب رقم محطة أو أكثر، مثال: 15442 554 4468"></textarea>
+    <div class="row">
+      <button class="btn primary" id="addBtn">إضافة</button>
+      <button class="btn ghost" id="logout">خروج من وضع المشرف</button>
+    </div>
+    <div class="msg" id="addMsg"></div>
+  </section>
   <ol id="list"></ol>
-  <div class="empty" id="empty" hidden>الرابط لا يحتوي على محطات.<br>تأكد أنك فتحت الرابط كاملاً من رسالة المجموعة.</div>
-  <p class="note">المسافات تقريبية (خط مستقيم). اضغط «ابدأ» لفتح الملاحة في قوقل ماب.</p>
+  <div class="empty" id="empty" hidden>لا توجد محطات حالياً.</div>
+  <details id="doneWrap" hidden><summary id="doneSum"></summary><ol id="doneList"></ol></details>
+  <p class="note">المسافات تقريبية (خط مستقيم). «تمت المعالجة» يتفعّل عندما تكون ضمن ٣٠ م من المحطة.<br>
+    <a href="#" id="adminLink" style="color:inherit">دخول المشرف</a></p>
 </main>
+
+<div class="modal" id="nameModal" hidden><div class="box">
+  <h3>اسمك</h3><p>يظهر للفريق عند الحجز أو إنهاء محطة.</p>
+  <input id="nameInput" autocomplete="name" placeholder="مثال: أحمد العتيبي">
+  <div class="row"><button class="btn primary grow" id="nameSave">حفظ</button></div>
+</div></div>
+<div class="modal" id="pinModal" hidden><div class="box">
+  <h3>دخول المشرف</h3><p>أدخل رمز المشرف.</p>
+  <input id="pinInput" type="password" inputmode="numeric" autocomplete="off">
+  <div class="row"><button class="btn primary grow" id="pinSave">دخول</button><button class="btn ghost" id="pinCancel">إلغاء</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-// Link format: #t=<title>&s=<num>.<lat>.<lng>_<num>.<lat>.<lng>...
-// all three base36; lat = (lat-20)*1e5, lng = (lng-35)*1e5
-function decode(hash){
-  const p = new URLSearchParams(hash.replace(/^#/, ''));
-  const out = [];
-  for (const tok of (p.get('s') || '').split('_')) {
-    const [n, a, b] = tok.split('.');
-    if (!n || !a || !b) continue;
-    const lat = parseInt(a, 36) / 1e5 + 20, lng = parseInt(b, 36) / 1e5 + 35;
-    if (isFinite(lat) && isFinite(lng)) out.push({ num: parseInt(n, 36), lat, lng });
-  }
-  return { title: p.get('t'), stations: out };
-}
+// Apps Script web-app URL (Deploy > Web app). ?api=... overrides it for testing.
+const API_URL = 'https://script.google.com/macros/s/AKfycbzQT9uehMSSz_cjepDeP1iE2XxiBFvxcEjkEiz_4IJCr1I_KxdZU20dxqXeDoXSP3oX/exec';
+const API = new URLSearchParams(location.search).get('api') || API_URL;
+const RADIUS_M = 30, GPS_TOLERANCE_M = 15;
 
-function km(a, b){
-  const R = 6371, r = Math.PI / 180;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try { return localStorage.getItem(k) || ''; } catch { return ''; } },
+  set(k, v){ try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} }
+};
+let name = store.get('tech_name'), pin = store.get('admin_pin');
+let items = [], me = null, busy = false;
+
+function meters(a, b){
+  const R = 6371000, r = Math.PI / 180;
   const dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
   const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*r) * Math.cos(b.lat*r) * Math.sin(dLng/2)**2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
-const fmt = d => d < 1 ? Math.round(d * 1000) + ' م' : d.toFixed(d < 10 ? 1 : 0) + ' كم';
+const fmt = m => m < 1000 ? Math.round(m) + ' م' : (m/1000).toFixed(m < 10000 ? 1 : 0) + ' كم';
+const time = iso => iso ? new Date(iso).toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit' }) : '';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const navUrl = s => `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving`;
 
-const { title, stations } = decode(location.hash);
-const $ = id => document.getElementById(id);
-if (title) { $('title').textContent = title; document.title = title; }
-$('count').textContent = stations.length + ' محطة';
-
-let me = null;
-const map = L.map('map', { zoomControl: false, attributionControl: true });
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
-const markers = new Map();
-for (const s of stations) {
-  const m = L.marker([s.lat, s.lng], { icon: L.divIcon({ className: '', html: `<span class="pin">${s.num}</span>`, iconSize: [0, 0] }) })
-    .bindPopup(`<b dir="ltr">S${s.num}</b><br><a href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`)
-    .addTo(map);
-  markers.set(s, m);
+function toast(text){
+  const t = $('toast'); t.textContent = text; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3500);
 }
-// numbers on pins only when zoomed in enough to read them
+
+async function api(body){
+  if (!API) throw new Error('لم يتم ربط الصفحة بالخادم بعد');
+  const res = body
+    ? await fetch(API, { method: 'POST', body: JSON.stringify(body) })   // text/plain: no CORS preflight
+    : await fetch(API + (API.includes('?') ? '&' : '?') + 't=' + Date.now());
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  if (data.items) { items = data.items.map(i => ({ ...i, lat: +i.lat, lng: +i.lng })); render(); }
+  return data;
+}
+async function act(body, okText){
+  if (busy) return; busy = true; document.body.style.cursor = 'progress';
+  try { const d = await api({ name, pin, ...body }); if (okText) toast(okText); return d; }
+  catch (e) { toast(e.message); }
+  finally { busy = false; document.body.style.cursor = ''; }
+}
+async function load(){
+  try { await api(); setCounts(); }
+  catch (e) { $('counts').textContent = 'تعذّر التحميل: ' + e.message; }
+}
+
+// ---------- map ----------
+const map = L.map('map', { zoomControl: false }).setView([24.47, 39.61], 11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+const layer = L.layerGroup().addTo(map), markers = new Map();
 map.on('zoomend', () => $('map').classList.toggle('labels', map.getZoom() >= 14));
-window.addEventListener('hashchange', () => location.reload());
-let meMarker = null;
-if (stations.length) map.fitBounds(L.latLngBounds(stations.map(s => [s.lat, s.lng])).pad(0.1));
-else { map.setView([24.47, 39.61], 11); $('empty').hidden = false; }
+let meMarker = null, fitted = false;
+
+function drawMap(){
+  layer.clearLayers(); markers.clear();
+  for (const s of items) {
+    const m = L.marker([s.lat, s.lng], {
+      icon: L.divIcon({ className: '', html: `<span class="pin ${s.status}">${s.station}</span>`, iconSize: [0, 0] }),
+      zIndexOffset: s.status === 'done' ? -100 : 0
+    }).bindPopup(`<b dir="ltr">S${s.station}</b><br><a href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`);
+    layer.addLayer(m); markers.set(s.id, m);
+  }
+  if (!fitted && items.length) {
+    fitted = true;
+    const open = items.filter(s => s.status !== 'done');
+    const pts = (me ? open.slice().sort((a, b) => meters(me, a) - meters(me, b)).slice(0, 3) : open).map(s => [s.lat, s.lng]);
+    if (me) pts.push([me.lat, me.lng]);
+    if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(me ? 0.25 : 0.1));
+  }
+}
+
+// ---------- list ----------
+function card(s, i, first){
+  const d = me ? meters(me, s) : null, mine = n => n && n === name;
+  const canDone = d != null && d <= RADIUS_M + Math.min(me.acc || 0, GPS_TOLERANCE_M);
+  let tag = '', btns = `<a class="btn primary" href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`;
+  if (s.status === 'open') {
+    btns += `<button class="btn amber" data-a="claim" data-id="${s.id}">أنا في الطريق</button>`;
+  } else if (s.status === 'claimed') {
+    tag = `<span class="tag amber">${mine(s.claimed_by) ? 'أنت في الطريق' : 'في الطريق: ' + esc(s.claimed_by)} · ${time(s.claimed_at)}</span>`;
+    if (mine(s.claimed_by) || pin) btns += `<button class="btn ghost" data-a="unclaim" data-id="${s.id}">إلغاء الحجز</button>`;
+  }
+  if (s.status !== 'done') {
+    const why = d == null ? 'حدد موقعك' : canDone ? '' : `تبعد ${fmt(d)}`;
+    btns += `<button class="btn primary grow" data-a="done" data-id="${s.id}" ${canDone ? '' : 'disabled'}>✓ تمت المعالجة${why ? ' — ' + why : ''}</button>`;
+  } else {
+    tag = `<span class="tag ok">✓ ${esc(s.done_by)} · ${time(s.done_at)}</span>`;
+    btns = (mine(s.done_by) || pin) ? `<button class="btn ghost" data-a="undo" data-id="${s.id}">تراجع</button>` : '';
+  }
+  if (pin) btns += `<button class="btn danger" data-a="remove" data-id="${s.id}">حذف</button>`;
+  const meta = d == null ? '' : (first ? 'الأقرب لك · ' : '') + fmt(d);
+  return `<li class="${s.status}${first ? ' first' : ''}">
+    <div class="head"><span class="rank">${s.status === 'done' ? '✓' : i + 1}</span>
+      <div class="info"><div class="num" data-id="${s.id}">S${s.station}</div>
+        ${meta ? `<div class="meta">${meta}</div>` : ''}${tag}</div></div>
+    ${btns ? `<div class="actions">${btns}</div>` : ''}</li>`;
+}
 
 function render(){
-  const q = $('q').value.replace(/\D/g, '');
-  let rows = stations.map(s => ({ s, d: me ? km(me, s) : null }));
-  if (me) rows.sort((a, b) => a.d - b.d);
-  if (q) rows = rows.filter(r => String(r.s.num).includes(q));
-  $('list').innerHTML = rows.map((r, i) => `
-    <li class="${i === 0 && me && !q ? 'first' : ''}">
-      <span class="rank">${i + 1}</span>
-      <div class="info">
-        <div class="num" data-i="${stations.indexOf(r.s)}">S${r.s.num}</div>
-        <div class="dist">${r.d == null ? 'المسافة غير متاحة' : (i === 0 && !q ? 'الأقرب لك · ' : '') + fmt(r.d)}</div>
-      </div>
-      <a class="go" href="${navUrl(r.s)}" target="_blank" rel="noopener">ابدأ ←</a>
-    </li>`).join('');
+  const byDist = (a, b) => me ? meters(me, a) - meters(me, b) : 0;
+  const open = items.filter(s => s.status !== 'done').sort(byDist);
+  const done = items.filter(s => s.status === 'done').sort((a, b) => String(b.done_at).localeCompare(String(a.done_at)));
+  $('list').innerHTML = open.map((s, i) => card(s, i, i === 0 && !!me)).join('');
+  $('doneList').innerHTML = done.map((s, i) => card(s, i, false)).join('');
+  $('empty').hidden = open.length > 0;
+  $('empty').textContent = items.length ? 'تمت معالجة جميع المحطات 👍' : 'لا توجد محطات حالياً.';
+  $('doneWrap').hidden = !done.length;
+  $('doneSum').textContent = `المحطات المنجزة (${done.length})`;
+  setCounts(); drawMap();
 }
-$('list').addEventListener('click', e => {
-  const el = e.target.closest('.num'); if (!el) return;
-  const s = stations[+el.dataset.i];
-  map.setView([s.lat, s.lng], 16); markers.get(s).openPopup();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-$('q').addEventListener('input', render);
+function setCounts(){
+  const done = items.filter(s => s.status === 'done').length, claimed = items.filter(s => s.status === 'claimed').length;
+  $('counts').textContent = items.length ? `${done} من ${items.length} تمت · ${claimed} في الطريق` : '';
+  $('bar').style.width = items.length ? (done / items.length * 100) + '%' : 0;
+}
 
-function setStatus(cls, text){ $('status').className = 'status ' + cls; $('statusText').textContent = text; }
-let firstFix = true;
+document.addEventListener('click', async e => {
+  const num = e.target.closest('.num');
+  if (num) {
+    const s = items.find(x => x.id === num.dataset.id); if (!s) return;
+    map.setView([s.lat, s.lng], 17); markers.get(s.id)?.openPopup(); window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const id = b.dataset.id, a = b.dataset.a, s = items.find(x => x.id === id);
+  if (!name && a !== 'remove') return askName();
+  if (a === 'claim') act({ action: 'claim', id }, 'تم — المحطة محجوزة باسمك');
+  if (a === 'unclaim') act({ action: 'unclaim', id }, 'تم إلغاء الحجز');
+  if (a === 'done') {
+    if (!confirm(`تأكيد: تمت معالجة المحطة S${s.station}؟`)) return;
+    act({ action: 'done', id, lat: me.lat, lng: me.lng, acc: me.acc }, 'تم تسجيل المعالجة ✓');
+  }
+  if (a === 'undo' && confirm(`التراجع عن معالجة S${s.station}؟`)) act({ action: 'undo', id }, 'تم التراجع');
+  if (a === 'remove' && confirm(`حذف S${s.station} من القائمة؟`)) act({ action: 'remove', id }, 'تم الحذف');
+});
+
+// ---------- name / admin ----------
+function askName(){ $('nameInput').value = name; $('nameModal').hidden = false; $('nameInput').focus(); }
+$('nameSave').onclick = () => {
+  const v = $('nameInput').value.trim(); if (!v) return;
+  name = v; store.set('tech_name', v); $('nameModal').hidden = true; showWho(); render();
+};
+function showWho(){ $('who').textContent = name ? '👤 ' + name : 'اسمك'; $('admin').hidden = !pin; $('adminLink').hidden = !!pin; }
+$('who').onclick = askName;
+
+$('adminLink').onclick = e => { e.preventDefault(); $('pinInput').value = ''; $('pinModal').hidden = false; $('pinInput').focus(); };
+$('pinCancel').onclick = () => $('pinModal').hidden = true;
+$('pinSave').onclick = async () => {
+  try { await api({ action: 'checkpin', pin: $('pinInput').value }); }
+  catch (e) { return toast(e.message); }
+  pin = $('pinInput').value; store.set('admin_pin', pin); $('pinModal').hidden = true; showWho(); render(); toast('وضع المشرف مفعّل');
+};
+$('logout').onclick = () => { pin = ''; store.set('admin_pin', ''); showWho(); render(); };
+$('addBtn').onclick = async () => {
+  const numbers = $('nums').value; if (!/\d/.test(numbers)) return;
+  const d = await act({ action: 'add', numbers });
+  if (!d) return;
+  const parts = [];
+  if (d.added.length) parts.push(`أُضيفت: ${d.added.join('، ')}`);
+  if (d.already.length) parts.push(`موجودة مسبقاً: ${d.already.join('، ')}`);
+  if (d.missing.length) parts.push(`غير موجودة في قاعدة المحطات: ${d.missing.join('، ')}`);
+  $('addMsg').innerHTML = parts.map(esc).join('<br>');
+  if (d.added.length) { $('nums').value = ''; toast(`تمت إضافة ${d.added.length} محطة`); }
+};
+
+// ---------- location & refresh ----------
+function setStatus(cls, text){ $('status').className = 'sub ' + cls; $('statusText').textContent = text; }
 if ('geolocation' in navigator) {
-  navigator.geolocation.watchPosition(pos => {
-    me = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    setStatus('ok', 'تم تحديد موقعك — القائمة مرتبة من الأقرب');
+  navigator.geolocation.watchPosition(p => {
+    const firstFix = !me;
+    me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+    setStatus('ok', `تم تحديد موقعك (دقة ±${Math.round(me.acc)} م) — القائمة مرتبة من الأقرب`);
     const icon = L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
     if (meMarker) meMarker.setLatLng([me.lat, me.lng]);
     else meMarker = L.marker([me.lat, me.lng], { icon, zIndexOffset: 1000 }).addTo(map);
-    if (firstFix && stations.length) {
-      firstFix = false;
-      const near = stations.slice().sort((a, b) => km(me, a) - km(me, b)).slice(0, 3);
-      map.fitBounds(L.latLngBounds([[me.lat, me.lng], ...near.map(s => [s.lat, s.lng])]).pad(0.25));
-    }
+    if (firstFix) fitted = false;
     render();
-  }, () => setStatus('bad', 'لم يتم السماح بالموقع — فعّل خدمات الموقع للمتصفح لترتيب المحطات'),
-     { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+  }, () => setStatus('bad', 'لم يتم السماح بالموقع — فعّل خدمات الموقع للمتصفح'),
+     { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
 } else setStatus('bad', 'المتصفح لا يدعم تحديد الموقع');
-render();
+
+$('refresh').onclick = () => load().then(() => toast('تم التحديث'));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+setInterval(() => { if (!document.hidden && !busy) load(); }, 60000);
+
+showWho();
+if (!name) askName();
+load();
 </script>
 </body>
 </html>
