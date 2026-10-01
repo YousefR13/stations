@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>محطات المهمة</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f8; --card:#ffffff; --ink:#14202b; --muted:#66727e; --line:#e3e7eb;
+  --brand:#0b6e4f; --brand-ink:#ffffff; --near:#e8f5ef; --warn:#b54708; --warn-bg:#fff4e5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a;
+    --brand:#2fb383; --brand-ink:#06140e; --near:#13281f; --warn:#f5a35b; --warn-bg:#2a1d10;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a;
+  --brand:#2fb383; --brand-ink:#06140e; --near:#13281f; --warn:#f5a35b; --warn-bg:#2a1d10;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+  -webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:1000;background:var(--card);border-bottom:1px solid var(--line);
+  padding:12px 16px calc(10px) ;padding-top:max(12px,env(safe-area-inset-top))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:18px;margin:0;font-weight:700}
+.count{font-size:13px;color:var(--muted)}
+.status{margin-top:8px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.status.ok .dot{background:var(--brand)}
+.status.bad{color:var(--warn)} .status.bad .dot{background:var(--warn)}
+.search{margin-top:10px;width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+#map{height:38vh;min-height:220px;background:var(--line)}
+main{padding:12px 16px 32px;max-width:720px;margin:0 auto}
+.empty{padding:40px 8px;text-align:center;color:var(--muted);line-height:1.8}
+ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+li{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;
+  display:flex;align-items:center;gap:12px}
+li.first{background:var(--near);border-color:var(--brand)}
+.rank{width:30px;height:30px;border-radius:50%;background:var(--bg);display:grid;place-items:center;
+  font-size:13px;font-weight:600;color:var(--muted);flex:none}
+li.first .rank{background:var(--brand);color:var(--brand-ink)}
+.info{flex:1;min-width:0}
+.num{font-size:19px;font-weight:700;letter-spacing:.3px;direction:ltr;text-align:right;cursor:pointer}
+.dist{font-size:13px;color:var(--muted);margin-top:2px}
+.go{flex:none;text-decoration:none;background:var(--brand);color:var(--brand-ink);font-weight:600;
+  font-size:15px;padding:10px 14px;border-radius:10px;white-space:nowrap}
+.go:active{opacity:.85}
+.note{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
+.leaflet-container{font-family:inherit}
+.pin{background:var(--brand);border:2px solid #fff;border-radius:50%;width:14px;height:14px;
+  box-shadow:0 1px 3px rgba(0,0,0,.35);transform:translate(-50%,-50%);display:block;font-size:0}
+.labels .pin{width:auto;height:auto;border-radius:12px;font-size:11px;font-weight:700;padding:1px 6px;
+  white-space:nowrap;display:inline-block;color:var(--brand-ink)}
+.me{width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;
+  box-shadow:0 0 0 6px rgba(26,115,232,.25)}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1 id="title">محطات المهمة</h1>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="status" id="status"><span class="dot"></span><span id="statusText">جارِ تحديد موقعك…</span></div>
+  <input class="search" id="q" type="search" inputmode="numeric" placeholder="ابحث برقم المحطة">
+</header>
+<div id="map"></div>
+<main>
+  <ol id="list"></ol>
+  <div class="empty" id="empty" hidden>الرابط لا يحتوي على محطات.<br>تأكد أنك فتحت الرابط كاملاً من رسالة المجموعة.</div>
+  <p class="note">المسافات تقريبية (خط مستقيم). اضغط «ابدأ» لفتح الملاحة في قوقل ماب.</p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// Link format: #t=<title>&s=<num>.<lat>.<lng>_<num>.<lat>.<lng>...
+// all three base36; lat = (lat-20)*1e5, lng = (lng-35)*1e5
+function decode(hash){
+  const p = new URLSearchParams(hash.replace(/^#/, ''));
+  const out = [];
+  for (const tok of (p.get('s') || '').split('_')) {
+    const [n, a, b] = tok.split('.');
+    if (!n || !a || !b) continue;
+    const lat = parseInt(a, 36) / 1e5 + 20, lng = parseInt(b, 36) / 1e5 + 35;
+    if (isFinite(lat) && isFinite(lng)) out.push({ num: parseInt(n, 36), lat, lng });
+  }
+  return { title: p.get('t'), stations: out };
+}
+
+function km(a, b){
+  const R = 6371, r = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
+  const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*r) * Math.cos(b.lat*r) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const fmt = d => d < 1 ? Math.round(d * 1000) + ' م' : d.toFixed(d < 10 ? 1 : 0) + ' كم';
+const navUrl = s => `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving`;
+
+const { title, stations } = decode(location.hash);
+const $ = id => document.getElementById(id);
+if (title) { $('title').textContent = title; document.title = title; }
+$('count').textContent = stations.length + ' محطة';
+
+let me = null;
+const map = L.map('map', { zoomControl: false, attributionControl: true });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+const markers = new Map();
+for (const s of stations) {
+  const m = L.marker([s.lat, s.lng], { icon: L.divIcon({ className: '', html: `<span class="pin">${s.num}</span>`, iconSize: [0, 0] }) })
+    .bindPopup(`<b dir="ltr">S${s.num}</b><br><a href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`)
+    .addTo(map);
+  markers.set(s, m);
+}
+// numbers on pins only when zoomed in enough to read them
+map.on('zoomend', () => $('map').classList.toggle('labels', map.getZoom() >= 14));
+window.addEventListener('hashchange', () => location.reload());
+let meMarker = null;
+if (stations.length) map.fitBounds(L.latLngBounds(stations.map(s => [s.lat, s.lng])).pad(0.1));
+else { map.setView([24.47, 39.61], 11); $('empty').hidden = false; }
+
+function render(){
+  const q = $('q').value.replace(/\D/g, '');
+  let rows = stations.map(s => ({ s, d: me ? km(me, s) : null }));
+  if (me) rows.sort((a, b) => a.d - b.d);
+  if (q) rows = rows.filter(r => String(r.s.num).includes(q));
+  $('list').innerHTML = rows.map((r, i) => `
+    <li class="${i === 0 && me && !q ? 'first' : ''}">
+      <span class="rank">${i + 1}</span>
+      <div class="info">
+        <div class="num" data-i="${stations.indexOf(r.s)}">S${r.s.num}</div>
+        <div class="dist">${r.d == null ? 'المسافة غير متاحة' : (i === 0 && !q ? 'الأقرب لك · ' : '') + fmt(r.d)}</div>
+      </div>
+      <a class="go" href="${navUrl(r.s)}" target="_blank" rel="noopener">ابدأ ←</a>
+    </li>`).join('');
+}
+$('list').addEventListener('click', e => {
+  const el = e.target.closest('.num'); if (!el) return;
+  const s = stations[+el.dataset.i];
+  map.setView([s.lat, s.lng], 16); markers.get(s).openPopup();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+$('q').addEventListener('input', render);
+
+function setStatus(cls, text){ $('status').className = 'status ' + cls; $('statusText').textContent = text; }
+let firstFix = true;
+if ('geolocation' in navigator) {
+  navigator.geolocation.watchPosition(pos => {
+    me = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    setStatus('ok', 'تم تحديد موقعك — القائمة مرتبة من الأقرب');
+    const icon = L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+    if (meMarker) meMarker.setLatLng([me.lat, me.lng]);
+    else meMarker = L.marker([me.lat, me.lng], { icon, zIndexOffset: 1000 }).addTo(map);
+    if (firstFix && stations.length) {
+      firstFix = false;
+      const near = stations.slice().sort((a, b) => km(me, a) - km(me, b)).slice(0, 3);
+      map.fitBounds(L.latLngBounds([[me.lat, me.lng], ...near.map(s => [s.lat, s.lng])]).pad(0.25));
+    }
+    render();
+  }, () => setStatus('bad', 'لم يتم السماح بالموقع — فعّل خدمات الموقع للمتصفح لترتيب المحطات'),
+     { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 });
+} else setStatus('bad', 'المتصفح لا يدعم تحديد الموقع');
+render();
+</script>
+</body>
+</html>
