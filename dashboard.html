@@ -28,7 +28,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);
   font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;-webkit-text-size-adjust:100%}
-button,input,select{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 header{position:sticky;top:0;z-index:10;background:var(--card);border-bottom:1px solid var(--line);
   padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top))}
 .bar{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -83,6 +83,19 @@ tr:last-child td{border-bottom:0}
 .lock input{width:100%;font-size:18px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);letter-spacing:4px;text-align:center}
 .btn{border:0;border-radius:10px;padding:11px 14px;font-weight:600;cursor:pointer;background:var(--brand);color:var(--brand-ink);width:100%;margin-top:10px;font-size:15px}
 .err{color:var(--danger);font-size:13px;min-height:20px;margin-top:8px}
+.pill.conf{background:var(--soft);color:var(--ink)}
+.act{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;cursor:pointer}
+.act.go{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px}
+.modal[hidden]{display:none}
+.modal .box{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:380px}
+.modal h3{margin:0 0 4px;font-size:17px} .modal p{margin:0 0 12px;font-size:13px;color:var(--muted);line-height:1.6}
+.modal label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+.modal input,.modal textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px;font-size:16px}
+.modal textarea{min-height:60px;resize:vertical}
+.modal .row{display:flex;gap:8px;margin-top:14px}
+.modal .row .btn{margin-top:0}
+.btn.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -91,6 +104,18 @@ tr:last-child td{border-bottom:0}
   <input id="pin" type="password" inputmode="numeric" autocomplete="off" autofocus>
   <button class="btn" id="enter">دخول</button>
   <div class="err" id="err"></div>
+</div></div>
+
+<div class="modal" id="confirmModal" hidden><div class="box">
+  <h3 id="cTitle"></h3>
+  <p>استخدمها إذا تأكدت أن الفني أنجز المحطة ونسي يحددها في الموقع. تُسجَّل باسم الفني مع «بتأكيد المشرف».</p>
+  <label for="cTech">الفني الذي أنجزها</label>
+  <input id="cTech" list="techList" autocomplete="off" placeholder="اختر أو اكتب الاسم">
+  <datalist id="techList"></datalist>
+  <label for="cNote">ملاحظة (اختياري)</label>
+  <textarea id="cNote" placeholder="مثال: تم التأكد بالاتصال مع الفني"></textarea>
+  <div class="err" id="cErr"></div>
+  <div class="row"><button class="btn" id="cOk">تأكيد الإنجاز</button><button class="btn ghost" id="cCancel">إلغاء</button></div>
 </div></div>
 
 <header>
@@ -161,7 +186,7 @@ const fmtDur = ms => {
 };
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
 const STATUS = { open: 'لم يتوجه لها أحد', claimed: 'في الطريق', done: 'تمت' };
-const ACTION = { add: 'أضاف', remove: 'حذف', urgent: 'جعل عاجلة', normal: 'ألغى العجلة', claim: 'في الطريق إلى', unclaim: 'ألغى الحجز', done: 'أنهى', undo: 'تراجع عن' };
+const ACTION = { confirm: 'أكّد إنجاز', add: 'أضاف', remove: 'حذف', urgent: 'جعل عاجلة', normal: 'ألغى العجلة', claim: 'في الطريق إلى', unclaim: 'ألغى الحجز', done: 'أنهى', undo: 'تراجع عن' };
 
 function since(){
   if (period === 'all') return 0;
@@ -198,7 +223,7 @@ function render(){
 
   $('kpis').innerHTML = [
     ['المطلوبة في الفترة', inPeriod.length, ''],
-    ['تمت في الفترة', doneInPeriod.length, 'green'],
+    ['تمت في الفترة', doneInPeriod.length, 'green', (n => n ? `منها ${n} بتأكيد المشرف` : '')(doneInPeriod.filter(i => i.confirmed_by).length)],
     ['المتبقية الآن', pending.length, '', oldest ? 'أقدمها منذ ' + fmtDur(oldest) : ''],
     ['في الطريق الآن', claimed.length, 'amber'],
     ['عاجلة متبقية', urgent.length, urgent.length ? 'red' : ''],
@@ -234,9 +259,9 @@ function render(){
         <td>${s.now || '—'}</td><td>${fmtDur(avg(s.dur))}</td></tr>`).join('')
     : '<tr><td class="empty">لا يوجد إنجاز في هذه الفترة</td></tr>';
 
-  // stations table: requested in period + everything still pending
+  // stations table: requested or completed in period + everything still pending
   const q = $('q').value.replace(/\D/g, ''), fs = $('fStatus').value, fsup = $('fSup').value;
-  let rows = items.filter(i => +t(i.added_at) >= from || i.status !== 'done');
+  let rows = items.filter(i => +t(i.added_at) >= from || i.status !== 'done' || +t(i.done_at) >= from);
   if (q) rows = rows.filter(i => String(i.station).includes(q));
   if (fs === 'pending') rows = rows.filter(i => i.status !== 'done');
   else if (fs === 'urgent') rows = rows.filter(i => i.priority === 'high');
@@ -247,14 +272,17 @@ function render(){
     || order[a.status] - order[b.status] || (t(b.added_at) - t(a.added_at)));
   $('stCount').textContent = rows.length + ' محطة';
   $('stations').innerHTML = rows.length
-    ? `<tr><th>المحطة</th><th>طلبها</th><th>وقت الطلب</th><th>الحالة</th><th>الفني</th><th>وقت المعالجة</th><th>المدة</th></tr>` +
+    ? `<tr><th>المحطة</th><th>طلبها</th><th>وقت الطلب</th><th>الحالة</th><th>الفني</th><th>وقت المعالجة</th><th>المدة</th>${data.supervisor ? '<th></th>' : ''}</tr>` +
       rows.slice(0, shown).map(i => {
         const tech = i.status === 'done' ? i.done_by : i.claimed_by;
         const dur = i.status === 'done' ? t(i.done_at) - t(i.added_at) : Date.now() - t(i.added_at);
         return `<tr><td class="num">S${i.station}</td><td>${esc(i.added_by || 'غير محدد')}</td><td>${fmtTime(t(i.added_at))}</td>
           <td><span class="pill ${i.status}">${STATUS[i.status] || i.status}</span>${i.priority === 'high' ? ' <span class="pill red">عاجلة</span>' : ''}</td>
-          <td>${esc(tech) || '—'}</td><td>${i.status === 'done' ? fmtTime(t(i.done_at)) : '—'}</td>
-          <td class="${i.status === 'done' ? '' : 'muted'}">${fmtDur(dur)}${i.status === 'done' ? '' : ' (جارية)'}</td></tr>`;
+          <td>${esc(tech) || '—'}${i.confirmed_by ? `<br><span class="pill conf">بتأكيد ${esc(i.confirmed_by)}</span>` : ''}</td><td>${i.status === 'done' ? fmtTime(t(i.done_at)) : '—'}</td>
+          <td class="${i.status === 'done' ? '' : 'muted'}">${fmtDur(dur)}${i.status === 'done' ? '' : ' (جارية)'}</td>
+          ${data.supervisor ? `<td>${i.status === 'done'
+            ? `<button class="act" data-a="undo" data-id="${i.id}">تراجع</button>`
+            : `<button class="act go" data-a="confirm" data-id="${i.id}">تأكيد الإنجاز</button>`}</td>` : ''}</tr>`;
       }).join('')
     : '<tr><td class="empty">لا توجد محطات مطابقة</td></tr>';
   $('more').hidden = rows.length <= shown;
@@ -263,6 +291,38 @@ function render(){
     ? data.log.slice(0, 25).map(l => `<li><time>${fmtTime(t(l.time))}</time><span><b>${esc(l.who)}</b> ${ACTION[l.action] || esc(l.action)} <b dir="ltr">S${esc(l.station)}</b>${l.note ? ` <span class="muted">· ${esc(l.note)}</span>` : ''}</span></li>`).join('')
     : '<li class="empty">لا يوجد نشاط بعد</li>';
 }
+
+// ---------- supervisor actions (confirm on behalf of a technician / undo) ----------
+async function post(body){
+  const d = await (await fetch(API, { method: 'POST', body: JSON.stringify({ pin, ...body }) })).json();
+  if (d.error) throw new Error(d.error);
+  await load();
+}
+let cId = null;
+$('stations').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const it = data.items.find(i => i.id === b.dataset.id); if (!it) return;
+  if (b.dataset.a === 'undo') {
+    if (!confirm(`التراجع عن إنجاز S${it.station}؟ ترجع المحطة للقائمة المتبقية.`)) return;
+    try { await post({ action: 'undo', id: it.id }); } catch (err) { alert(err.message); }
+    return;
+  }
+  cId = it.id;
+  const techs = [...new Set(data.items.flatMap(i => [i.done_by, i.claimed_by]).concat((data.log || []).filter(l => !String(l.who).startsWith('المشرف')).map(l => l.who)).filter(Boolean))].sort();
+  $('techList').innerHTML = techs.map(n => `<option value="${esc(n)}">`).join('');
+  $('cTitle').textContent = `تأكيد إنجاز S${it.station}`;
+  $('cTech').value = it.claimed_by || ''; $('cNote').value = ''; $('cErr').textContent = '';
+  $('confirmModal').hidden = false; $('cTech').focus();
+});
+$('cCancel').onclick = () => $('confirmModal').hidden = true;
+$('cOk').onclick = async () => {
+  const tech = $('cTech').value.trim();
+  if (!tech) { $('cErr').textContent = 'اختر الفني الذي أنجز المحطة'; return; }
+  $('cOk').disabled = true;
+  try { await post({ action: 'confirm', id: cId, tech, note: $('cNote').value.trim() }); $('confirmModal').hidden = true; }
+  catch (err) { $('cErr').textContent = err.message; }
+  finally { $('cOk').disabled = false; }
+};
 
 async function enter(){
   $('err').textContent = '';
