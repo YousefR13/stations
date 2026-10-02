@@ -115,6 +115,12 @@ li.sel{outline:2px solid #1a73e8;outline-offset:-1px}
 .groups .gname{font-weight:700;flex:1;min-width:120px}
 .groups .gmeta{font-size:12px;color:var(--muted);width:100%}
 .linkbox{direction:ltr;font-size:13px;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:4px}
+.alert{background:var(--danger-bg);color:var(--danger);border:2px solid var(--danger);border-radius:12px;
+  padding:10px 12px;margin-top:10px;font-size:14px;line-height:1.7}
+.alert[hidden]{display:none}
+.alert b{display:block;font-size:15px}
+.alert .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.alert .chips span{background:var(--card);border:1px solid var(--danger);border-radius:999px;padding:1px 10px;font-weight:700;direction:ltr}
 .me{width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)}
 </style>
 </head>
@@ -138,6 +144,11 @@ li.sel{outline:2px solid #1a73e8;outline-offset:-1px}
       <button class="btn primary" id="addBtn">إضافة</button>
       <label style="display:flex;gap:6px;align-items:center;font-size:14px;font-weight:600;color:var(--danger)"><input type="checkbox" id="urgent" style="width:18px;height:18px"> عاجلة</label>
       <button class="btn ghost" id="logout">خروج من وضع المشرف</button>
+    </div>
+    <div class="alert" id="missingAlert" role="alert" hidden>
+      <b>⚠ محطات غير موجودة في ملف المحطات — تأكد من الرقم</b>
+      لم تُضف للقائمة. صحّح الرقم ثم اضغط «إضافة» مرة أخرى.
+      <div class="chips" id="missingChips"></div>
     </div>
     <div class="msg" id="addMsg"></div>
     <h2 style="margin-top:16px">المهام الخاصة</h2>
@@ -447,6 +458,7 @@ $('pinSave').onclick = async () => {
   $('pinModal').hidden = true; showWho(); render(); loadGroups(); toast('أهلاً ' + (d.supervisor || '') + ' — وضع المشرف مفعّل');
 };
 $('logout').onclick = () => { pin = ''; store.set('admin_pin', ''); showWho(); render(); };
+const missingAll = new Set();
 $('addBtn').onclick = async () => {
   const numbers = $('nums').value; if (!/\d/.test(numbers)) return;
   const d = await act({ action: 'add', numbers, priority: $('urgent').checked ? 'high' : '' });
@@ -454,9 +466,16 @@ $('addBtn').onclick = async () => {
   const parts = [];
   if (d.added.length) parts.push(`أُضيفت: ${d.added.join('، ')}`);
   if (d.already.length) parts.push(`موجودة مسبقاً: ${d.already.join('، ')}`);
-  if (d.missing.length) parts.push(`غير موجودة في قاعدة المحطات: ${d.missing.join('، ')}`);
   $('addMsg').innerHTML = parts.map(esc).join('<br>');
-  if (d.added.length) { $('nums').value = ''; $('urgent').checked = false; toast(`تمت إضافة ${d.added.length} محطة`); }
+  if (d.added.length) { $('urgent').checked = false; toast(`تمت إضافة ${d.added.length} محطة`); }
+  // wrong numbers: a red alert that stays until the page is reloaded; the box keeps them for correcting
+  $('nums').value = d.missing.join(' ');
+  if (d.missing.length) {
+    d.missing.forEach(n => missingAll.add(n));
+    $('missingChips').innerHTML = [...missingAll].map(n => `<span>${esc(n)}</span>`).join('');
+    $('missingAlert').hidden = false;
+    $('missingAlert').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 };
 
 // ---------- location & refresh ----------
