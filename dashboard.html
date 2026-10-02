@@ -200,7 +200,8 @@ async function load(){
   const d = await res.json();
   if (d.error) throw new Error(d.error);
   data = d;
-  $('updated').textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit' });
+  $('updated').textContent = (d.supervisor ? `الدخول: المشرف ${d.supervisor} (يمكنك تأكيد الإنجاز)` : 'الدخول: برمز لوحة التحكم — عرض فقط، ادخل برمز مشرف لتأكيد الإنجاز')
+    + ' · آخر تحديث: ' + new Date().toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit' });
   fillSupervisors(); render();
 }
 
