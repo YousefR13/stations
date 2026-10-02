@@ -12,19 +12,19 @@
 :root{
   --bg:#f4f6f8; --card:#ffffff; --ink:#14202b; --muted:#66727e; --line:#e3e7eb;
   --brand:#0b6e4f; --brand-ink:#ffffff; --near:#e8f5ef;
-  --amber:#b45309; --amber-bg:#fff4e0; --done:#8a96a1; --danger:#b42318; --danger-bg:#fdecea;
+  --amber:#b45309; --amber-bg:#fff4e0; --done:#8a96a1; --danger:#b42318; --danger-bg:#fdecea; --urgent-bg:#fff1f0;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a;
     --brand:#2fb383; --brand-ink:#06140e; --near:#13281f;
-    --amber:#f5a35b; --amber-bg:#2a1d10; --done:#6b7782; --danger:#f97066; --danger-bg:#2c1513;
+    --amber:#f5a35b; --amber-bg:#2a1d10; --done:#6b7782; --danger:#f97066; --danger-bg:#2c1513; --urgent-bg:#2a1414;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a;
   --brand:#2fb383; --brand-ink:#06140e; --near:#13281f;
-  --amber:#f5a35b; --amber-bg:#2a1d10; --done:#6b7782; --danger:#f97066; --danger-bg:#2c1513;
+  --amber:#f5a35b; --amber-bg:#2a1d10; --done:#6b7782; --danger:#f97066; --danger-bg:#2c1513; --urgent-bg:#2a1414;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);
@@ -53,6 +53,9 @@ ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10p
 li{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 li.first{background:var(--near);border-color:var(--brand)}
 li.claimed{border-color:var(--amber)}
+li.urgent{border-color:var(--danger);border-width:2px}
+li.urgent.top{background:var(--urgent-bg)}
+li.urgent.top .rank{background:var(--danger);color:#fff}
 li.done{opacity:.75}
 .head{display:flex;align-items:center;gap:12px}
 .rank{width:30px;height:30px;border-radius:50%;background:var(--bg);display:grid;place-items:center;
@@ -66,6 +69,7 @@ li.done .num{text-decoration:line-through;text-decoration-thickness:1px}
 .tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;margin-top:4px}
 .tag.amber{background:var(--amber-bg);color:var(--amber)}
 .tag.ok{background:var(--near);color:var(--brand)}
+.tag.red{background:var(--danger-bg);color:var(--danger)}
 .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .btn{border:0;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;cursor:pointer;
   text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
@@ -94,6 +98,7 @@ summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
 .pin{border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 1px 3px rgba(0,0,0,.35);
   transform:translate(-50%,-50%);display:block;font-size:0;background:var(--brand);color:var(--brand-ink)}
 .pin.claimed{background:#d97706;color:#fff} .pin.done{background:#9aa5af;color:#fff}
+.pin.urgent{background:#d92d20;color:#fff;width:18px;height:18px}
 .labels .pin{width:auto;height:auto;border-radius:12px;font-size:11px;font-weight:700;padding:1px 6px;
   white-space:nowrap;display:inline-block}
 .me{width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)}
@@ -117,6 +122,7 @@ summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
     <textarea id="nums" inputmode="numeric" placeholder="اكتب رقم محطة أو أكثر، مثال: 15442 554 4468"></textarea>
     <div class="row">
       <button class="btn primary" id="addBtn">إضافة</button>
+      <label style="display:flex;gap:6px;align-items:center;font-size:14px;font-weight:600;color:var(--danger)"><input type="checkbox" id="urgent" style="width:18px;height:18px"> عاجلة</label>
       <button class="btn ghost" id="logout">خروج من وضع المشرف</button>
     </div>
     <div class="msg" id="addMsg"></div>
@@ -164,6 +170,8 @@ function meters(a, b){
 const fmt = m => m < 1000 ? Math.round(m) + ' م' : (m/1000).toFixed(m < 10000 ? 1 : 0) + ' كم';
 const time = iso => iso ? new Date(iso).toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit' }) : '';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+// urgent stations nobody has taken yet (or that I took) jump to the top of everyone's list
+const isTop = s => s.priority === 'high' && s.status !== 'done' && (s.status === 'open' || s.claimed_by === name);
 const navUrl = s => `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving`;
 
 function toast(text){
@@ -203,8 +211,8 @@ function drawMap(){
   layer.clearLayers(); markers.clear();
   for (const s of items) {
     const m = L.marker([s.lat, s.lng], {
-      icon: L.divIcon({ className: '', html: `<span class="pin ${s.status}">${s.station}</span>`, iconSize: [0, 0] }),
-      zIndexOffset: s.status === 'done' ? -100 : 0
+      icon: L.divIcon({ className: '', html: `<span class="pin ${s.status}${s.priority === 'high' && s.status !== 'done' ? ' urgent' : ''}">${s.station}</span>`, iconSize: [0, 0] }),
+      zIndexOffset: s.status === 'done' ? -100 : s.priority === 'high' ? 500 : 0
     }).bindPopup(`<b dir="ltr">S${s.station}</b><br><a href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`);
     layer.addLayer(m); markers.set(s.id, m);
   }
@@ -235,9 +243,12 @@ function card(s, i, first){
     tag = `<span class="tag ok">✓ ${esc(s.done_by)} · ${time(s.done_at)}</span>`;
     btns = (mine(s.done_by) || pin) ? `<button class="btn ghost" data-a="undo" data-id="${s.id}">تراجع</button>` : '';
   }
+  const urgent = s.priority === 'high' && s.status !== 'done';
+  if (urgent) tag = `<span class="tag red">⚠ عاجلة</span> ` + tag;
+  if (pin && s.status !== 'done') btns += `<button class="btn ${urgent ? 'ghost' : 'danger'}" data-a="priority" data-id="${s.id}">${urgent ? 'إلغاء العجلة' : '⚠ اجعلها عاجلة'}</button>`;
   if (pin) btns += `<button class="btn danger" data-a="remove" data-id="${s.id}">حذف</button>`;
-  const meta = d == null ? '' : (first ? 'الأقرب لك · ' : '') + fmt(d);
-  return `<li class="${s.status}${first ? ' first' : ''}">
+  const meta = d == null ? '' : (first && !isTop(s) ? 'الأقرب لك · ' : '') + fmt(d);
+  return `<li class="${s.status}${urgent ? ' urgent' : ''}${isTop(s) ? ' top' : ''}${first && !isTop(s) ? ' first' : ''}">
     <div class="head"><span class="rank">${s.status === 'done' ? '✓' : i + 1}</span>
       <div class="info"><div class="num" data-id="${s.id}">S${s.station}</div>
         ${meta ? `<div class="meta">${meta}</div>` : ''}${tag}</div></div>
@@ -246,9 +257,10 @@ function card(s, i, first){
 
 function render(){
   const byDist = (a, b) => me ? meters(me, a) - meters(me, b) : 0;
-  const open = items.filter(s => s.status !== 'done').sort(byDist);
+  const open = items.filter(s => s.status !== 'done').sort((a, b) => (isTop(b) - isTop(a)) || byDist(a, b));
   const done = items.filter(s => s.status === 'done').sort((a, b) => String(b.done_at).localeCompare(String(a.done_at)));
-  $('list').innerHTML = open.map((s, i) => card(s, i, i === 0 && !!me)).join('');
+  const firstNear = open.findIndex(s => !isTop(s));
+  $('list').innerHTML = open.map((s, i) => card(s, i, i === firstNear && !!me)).join('');
   $('doneList').innerHTML = done.map((s, i) => card(s, i, false)).join('');
   $('empty').hidden = open.length > 0;
   $('empty').textContent = items.length ? 'تمت معالجة جميع المحطات 👍' : 'لا توجد محطات حالياً.';
@@ -258,7 +270,8 @@ function render(){
 }
 function setCounts(){
   const done = items.filter(s => s.status === 'done').length, claimed = items.filter(s => s.status === 'claimed').length;
-  $('counts').textContent = items.length ? `${done} من ${items.length} تمت · ${claimed} في الطريق` : '';
+  const urgent = items.filter(s => s.priority === 'high' && s.status !== 'done').length;
+  $('counts').textContent = items.length ? `${done} من ${items.length} تمت · ${claimed} في الطريق` + (urgent ? ` · ⚠ ${urgent} عاجلة متبقية` : '') : '';
   $('bar').style.width = items.length ? (done / items.length * 100) + '%' : 0;
 }
 
@@ -279,6 +292,7 @@ document.addEventListener('click', async e => {
     act({ action: 'done', id, lat: me.lat, lng: me.lng, acc: me.acc }, 'تم تسجيل المعالجة ✓');
   }
   if (a === 'undo' && confirm(`التراجع عن معالجة S${s.station}؟`)) act({ action: 'undo', id }, 'تم التراجع');
+  if (a === 'priority') act({ action: 'priority', id, priority: s.priority === 'high' ? '' : 'high' }, s.priority === 'high' ? 'أُلغيت العجلة' : 'أصبحت عاجلة — تظهر أعلى القائمة للجميع');
   if (a === 'remove' && confirm(`حذف S${s.station} من القائمة؟`)) act({ action: 'remove', id }, 'تم الحذف');
 });
 
@@ -301,14 +315,14 @@ $('pinSave').onclick = async () => {
 $('logout').onclick = () => { pin = ''; store.set('admin_pin', ''); showWho(); render(); };
 $('addBtn').onclick = async () => {
   const numbers = $('nums').value; if (!/\d/.test(numbers)) return;
-  const d = await act({ action: 'add', numbers });
+  const d = await act({ action: 'add', numbers, priority: $('urgent').checked ? 'high' : '' });
   if (!d) return;
   const parts = [];
   if (d.added.length) parts.push(`أُضيفت: ${d.added.join('، ')}`);
   if (d.already.length) parts.push(`موجودة مسبقاً: ${d.already.join('، ')}`);
   if (d.missing.length) parts.push(`غير موجودة في قاعدة المحطات: ${d.missing.join('، ')}`);
   $('addMsg').innerHTML = parts.map(esc).join('<br>');
-  if (d.added.length) { $('nums').value = ''; toast(`تمت إضافة ${d.added.length} محطة`); }
+  if (d.added.length) { $('nums').value = ''; $('urgent').checked = false; toast(`تمت إضافة ${d.added.length} محطة`); }
 };
 
 // ---------- location & refresh ----------
