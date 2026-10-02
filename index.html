@@ -121,6 +121,12 @@ li.sel{outline:2px solid #1a73e8;outline-offset:-1px}
 .alert b{display:block;font-size:15px}
 .alert .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .alert .chips span{background:var(--card);border:1px solid var(--danger);border-radius:999px;padding:1px 10px;font-weight:700;direction:ltr}
+.sortbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.sortbar[hidden]{display:none}
+.seg{display:flex;background:var(--line);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.added{font-size:12px;color:var(--muted);margin-top:2px}
 .me{width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)}
 </style>
 </head>
@@ -156,6 +162,9 @@ li.sel{outline:2px solid #1a73e8;outline-offset:-1px}
     <div class="row"><button class="btn amber" id="selStart">＋ إنشاء مهمة خاصة</button></div>
     <ul class="groups" id="groups"></ul>
   </section>
+  <div class="sortbar" id="sortbar" hidden>ترتيب:
+    <div class="seg" id="sortSeg"><button data-s="near">الأقرب</button><button data-s="recent">الأحدث إضافة</button></div>
+  </div>
   <ol id="list"></ol>
   <div class="empty" id="empty" hidden>لا توجد محطات حالياً.</div>
   <details id="doneWrap" hidden><summary id="doneSum"></summary><ol id="doneList"></ol></details>
@@ -226,6 +235,13 @@ const time = iso => iso ? new Date(iso).toLocaleTimeString('ar-SA', { hour: 'num
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 // urgent stations nobody has taken yet (or that I took) jump to the top of everyone's list
 const isTop = s => s.priority === 'high' && s.status !== 'done' && (s.status === 'open' || s.claimed_by === name);
+const when = iso => {
+  if (!iso) return '';
+  const d = new Date(iso), today = new Date().toDateString() === d.toDateString();
+  return today ? 'اليوم ' + time(iso) : d.toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' }) + ' ' + time(iso);
+};
+// supervisor can list stations newest-added first, to find and remove one just added
+let sortMode = store.get('sort_mode') || 'near';
 const navUrl = s => `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving`;
 
 function toast(text){
@@ -310,15 +326,20 @@ function card(s, i, first){
   return `<li class="${s.status}${sel.has(s.id) ? ' sel' : ''}${urgent ? ' urgent' : ''}${isTop(s) ? ' top' : ''}${first && !isTop(s) ? ' first' : ''}">
     <div class="head"><span class="rank">${s.status === 'done' ? '✓' : i + 1}</span>
       <div class="info"><div class="num" data-id="${s.id}">S${s.station}</div>
-        ${meta ? `<div class="meta">${meta}</div>` : ''}${tag}</div></div>
+        ${meta ? `<div class="meta">${meta}</div>` : ''}${pin && s.added_at ? `<div class="added">أُضيفت ${when(s.added_at)}</div>` : ''}${tag}</div></div>
     ${btns ? `<div class="actions">${btns}</div>` : ''}</li>`;
 }
 
 function render(){
   const byDist = (a, b) => me ? meters(me, a) - meters(me, b) : 0;
-  const open = items.filter(s => s.status !== 'done').sort((a, b) => (isTop(b) - isTop(a)) || byDist(a, b));
+  const recent = pin && sortMode === 'recent';
+  const open = items.filter(s => s.status !== 'done').sort(recent
+    ? (a, b) => String(b.added_at).localeCompare(String(a.added_at))
+    : (a, b) => (isTop(b) - isTop(a)) || byDist(a, b));
+  $('sortbar').hidden = !pin;
+  for (const b of $('sortSeg').children) b.classList.toggle('on', b.dataset.s === (recent ? 'recent' : 'near'));
   const done = items.filter(s => s.status === 'done').sort((a, b) => String(b.done_at).localeCompare(String(a.done_at)));
-  const firstNear = open.findIndex(s => !isTop(s));
+  const firstNear = recent ? -1 : open.findIndex(s => !isTop(s));
   $('list').innerHTML = open.map((s, i) => card(s, i, i === firstNear && !!me)).join('');
   $('doneList').innerHTML = done.map((s, i) => card(s, i, false)).join('');
   $('empty').hidden = open.length > 0;
@@ -437,6 +458,11 @@ $('groups').addEventListener('click', async e => {
   if (confirm(`حذف «${gr.name || 'مهمة خاصة'}»؟ يتوقف رابطها، والمحطات تبقى في القائمة العامة.`)) {
     await act({ action: 'group_delete', gid: gr.id }, 'تم حذف المهمة'); loadGroups();
   }
+});
+
+$('sortSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-s]'); if (!b) return;
+  sortMode = b.dataset.s; store.set('sort_mode', sortMode); render();
 });
 
 // ---------- name / admin ----------
