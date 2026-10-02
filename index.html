@@ -101,6 +101,20 @@ summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
 .pin.urgent{background:#d92d20;color:#fff;width:18px;height:18px}
 .labels .pin{width:auto;height:auto;border-radius:12px;font-size:11px;font-weight:700;padding:1px 6px;
   white-space:nowrap;display:inline-block}
+.pin.sel{outline:3px solid #1a73e8;outline-offset:2px}
+#map.big{height:58vh}
+.selbar{position:fixed;left:0;right:0;bottom:0;z-index:1500;background:var(--card);border-top:1px solid var(--line);
+  padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(0,0,0,.08)}
+.selbar[hidden]{display:none}
+.selbar .row{margin-top:0}
+.selbar input{flex:1;min-width:120px;font-size:16px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.selcount{font-weight:700;font-size:14px;margin-bottom:8px}
+li.sel{outline:2px solid #1a73e8;outline-offset:-1px}
+.groups{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.groups li{padding:10px 12px;border-radius:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.groups .gname{font-weight:700;flex:1;min-width:120px}
+.groups .gmeta{font-size:12px;color:var(--muted);width:100%}
+.linkbox{direction:ltr;font-size:13px;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:4px}
 .me{width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)}
 </style>
 </head>
@@ -126,6 +140,10 @@ summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
       <button class="btn ghost" id="logout">خروج من وضع المشرف</button>
     </div>
     <div class="msg" id="addMsg"></div>
+    <h2 style="margin-top:16px">المهام الخاصة</h2>
+    <div class="msg">حدّد محطات قريبة من بعض على الخريطة، وأرسل رابطها لفني — لا يرى إلا هذه المحطات.</div>
+    <div class="row"><button class="btn amber" id="selStart">＋ إنشاء مهمة خاصة</button></div>
+    <ul class="groups" id="groups"></ul>
   </section>
   <ol id="list"></ol>
   <div class="empty" id="empty" hidden>لا توجد محطات حالياً.</div>
@@ -151,6 +169,21 @@ summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
   <input id="pinInput" type="password" inputmode="numeric" autocomplete="off">
   <div class="row"><button class="btn primary grow" id="pinSave">دخول</button><button class="btn ghost" id="pinCancel">إلغاء</button></div>
 </div></div>
+<div class="selbar" id="selbar" hidden>
+  <div class="selcount" id="selCount"></div>
+  <div class="row">
+    <input id="selName" maxlength="60" placeholder="اسم المهمة (اختياري)">
+    <button class="btn primary" id="selCreate">إنشاء الرابط</button>
+    <button class="btn ghost" id="selCancel">إلغاء</button>
+  </div>
+</div>
+<div class="modal" id="linkModal" hidden><div class="box">
+  <h3 id="linkTitle">رابط المهمة جاهز</h3><p>أرسله للفني — يفتح عنده المحطات المحددة فقط.</p>
+  <div class="linkbox" id="linkText"></div>
+  <div class="row"><button class="btn primary grow" id="linkCopy">نسخ الرابط</button>
+    <a class="btn amber" id="linkWa" target="_blank" rel="noopener">واتساب</a>
+    <button class="btn ghost" id="linkClose">إغلاق</button></div>
+</div></div>
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -167,6 +200,9 @@ const store = {
 };
 let name = store.get('tech_name'), pin = store.get('admin_pin');
 let items = [], me = null, busy = false;
+// a special-task link (#g=<id>) shows only that task's stations
+const G = new URLSearchParams(location.hash.slice(1)).get('g') || '';
+let selecting = false; const sel = new Set();
 
 function meters(a, b){
   const R = 6371000, r = Math.PI / 180;
@@ -190,15 +226,16 @@ async function api(body){
   if (!API) throw new Error('لم يتم ربط الصفحة بالخادم بعد');
   const res = body
     ? await fetch(API, { method: 'POST', body: JSON.stringify(body) })   // text/plain: no CORS preflight
-    : await fetch(API + (API.includes('?') ? '&' : '?') + 't=' + Date.now());
+    : await fetch(API + (API.includes('?') ? '&' : '?') + 't=' + Date.now() + (G ? '&g=' + encodeURIComponent(G) : ''));
   const data = await res.json();
   if (data.error) throw new Error(data.error);
+  if (G && data.group) { const t = data.group.name || 'مهمة خاصة'; document.querySelector('h1').textContent = t; document.title = t; }
   if (data.items) { items = data.items.map(i => ({ ...i, lat: +i.lat, lng: +i.lng })); render(); }
   return data;
 }
 async function act(body, okText){
   if (busy) return; busy = true; document.body.style.cursor = 'progress';
-  try { const d = await api({ name, pin, ...body }); if (okText) toast(okText); return d; }
+  try { const d = await api({ name, pin, g: G, ...body }); if (okText) toast(okText); return d; }
   catch (e) { toast(e.message); }
   finally { busy = false; document.body.style.cursor = ''; }
 }
@@ -218,9 +255,11 @@ function drawMap(){
   layer.clearLayers(); markers.clear();
   for (const s of items) {
     const m = L.marker([s.lat, s.lng], {
-      icon: L.divIcon({ className: '', html: `<span class="pin ${s.status}${s.priority === 'high' && s.status !== 'done' ? ' urgent' : ''}">${s.station}</span>`, iconSize: [0, 0] }),
-      zIndexOffset: s.status === 'done' ? -100 : s.priority === 'high' ? 500 : 0
-    }).bindPopup(`<b dir="ltr">S${s.station}</b><br><a href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`);
+      icon: L.divIcon({ className: '', html: `<span class="pin ${s.status}${s.priority === 'high' && s.status !== 'done' ? ' urgent' : ''}${sel.has(s.id) ? ' sel' : ''}">${s.station}</span>`, iconSize: [0, 0] }),
+      zIndexOffset: s.status === 'done' ? -100 : sel.has(s.id) ? 800 : s.priority === 'high' ? 500 : 0
+    });
+    if (selecting) m.on('click', () => toggleSel(s));
+    else m.bindPopup(`<b dir="ltr">S${s.station}</b><br><a href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`);
     layer.addLayer(m); markers.set(s.id, m);
   }
   if (!fitted && items.length) {
@@ -254,9 +293,10 @@ function card(s, i, first){
   if (urgent) tag = `<span class="tag red">⚠ عاجلة</span> ` + tag;
   if (pin && s.status !== 'done') btns += `<button class="btn ${urgent ? 'ghost' : 'danger'}" data-a="priority" data-id="${s.id}">${urgent ? 'إلغاء العجلة' : '⚠ اجعلها عاجلة'}</button>`;
   if (pin && s.status !== 'done') btns += `<button class="btn ghost" data-a="confirm" data-id="${s.id}">✓ تأكيد الإنجاز</button>`;
+  if (selecting && s.status !== 'done') btns = `<button class="btn ${sel.has(s.id) ? 'primary' : 'ghost'} grow" data-a="sel" data-id="${s.id}">${sel.has(s.id) ? '✓ محددة للمهمة' : 'تحديد للمهمة'}</button>`;
   if (pin) btns += `<button class="btn danger" data-a="remove" data-id="${s.id}">حذف</button>`;
   const meta = d == null ? '' : (first && !isTop(s) ? 'الأقرب لك · ' : '') + fmt(d);
-  return `<li class="${s.status}${urgent ? ' urgent' : ''}${isTop(s) ? ' top' : ''}${first && !isTop(s) ? ' first' : ''}">
+  return `<li class="${s.status}${sel.has(s.id) ? ' sel' : ''}${urgent ? ' urgent' : ''}${isTop(s) ? ' top' : ''}${first && !isTop(s) ? ' first' : ''}">
     <div class="head"><span class="rank">${s.status === 'done' ? '✓' : i + 1}</span>
       <div class="info"><div class="num" data-id="${s.id}">S${s.station}</div>
         ${meta ? `<div class="meta">${meta}</div>` : ''}${tag}</div></div>
@@ -292,7 +332,8 @@ document.addEventListener('click', async e => {
   }
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const id = b.dataset.id, a = b.dataset.a, s = items.find(x => x.id === id);
-  if (!name && !['remove', 'confirm', 'priority'].includes(a)) return askName();
+  if (!name && !['remove', 'confirm', 'priority', 'sel'].includes(a)) return askName();
+  if (a === 'sel') return toggleSel(s);
   if (a === 'confirm') return openConfirm(s);
   if (a === 'claim') act({ action: 'claim', id }, 'تمت إضافة المحطة لمهامك');
   if (a === 'unclaim') act({ action: 'unclaim', id }, 'تم إلغاء الحجز');
@@ -323,6 +364,70 @@ $('cOk').onclick = async () => {
   if (d) $('confirmModal').hidden = true;
 };
 
+// ---------- supervisor: special tasks (select stations → shareable link) ----------
+const SEL_HINT = 'اضغط على المحطات في الخريطة أو القائمة لتحديدها';
+function toggleSel(s){
+  if (s.status === 'done') return;
+  sel.has(s.id) ? sel.delete(s.id) : sel.add(s.id);
+  $('selCount').textContent = sel.size ? `محدد: ${sel.size} ${sel.size >= 3 && sel.size <= 10 ? 'محطات' : 'محطة'}` : SEL_HINT;
+  render();
+}
+function setSelecting(on){
+  selecting = on; sel.clear();
+  $('selbar').hidden = !on; $('map').classList.toggle('big', on);
+  $('selName').value = ''; $('selCount').textContent = SEL_HINT;
+  document.body.style.paddingBottom = on ? '120px' : '';
+  setTimeout(() => map.invalidateSize(), 50);
+  if (on) {
+    const open = items.filter(s => s.status !== 'done');
+    if (open.length) map.fitBounds(L.latLngBounds(open.map(s => [s.lat, s.lng])).pad(0.1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  render();
+}
+$('selStart').onclick = () => setSelecting(true);
+$('selCancel').onclick = () => setSelecting(false);
+const linkFor = id => location.href.split('#')[0] + '#g=' + id;
+$('selCreate').onclick = async () => {
+  if (!sel.size) return toast('حدد محطة واحدة على الأقل');
+  const d = await act({ action: 'group_create', ids: [...sel], title: $('selName').value.trim() });
+  if (!d || !d.group) return;
+  setSelecting(false); showLink(d.group); loadGroups();
+};
+function showLink(gr){
+  const url = linkFor(gr.id), label = gr.name || 'مهمة خاصة';
+  $('linkTitle').textContent = 'رابط: ' + label;
+  $('linkText').textContent = url;
+  $('linkWa').href = 'https://wa.me/?text=' + encodeURIComponent(label + '\n' + url);
+  $('linkModal').hidden = false;
+}
+$('linkClose').onclick = () => $('linkModal').hidden = true;
+$('linkCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('linkText').textContent); toast('تم نسخ الرابط'); }
+  catch { toast('انسخ الرابط يدوياً'); }
+};
+let groups = [];
+async function loadGroups(){
+  if (!pin) return;
+  try { const d = await api({ action: 'group_list', pin, g: G }); groups = d.groups || []; }
+  catch { groups = []; }
+  $('groups').innerHTML = groups.length ? groups.map(gr => `<li class="panel" style="margin:0">
+      <span class="gname">${esc(gr.name || 'مهمة خاصة')}</span>
+      <button class="btn ghost" data-g="copy" data-gid="${gr.id}">الرابط</button>
+      <a class="btn ghost" href="${linkFor(gr.id)}">فتح</a>
+      <button class="btn danger" data-g="del" data-gid="${gr.id}">حذف</button>
+      <span class="gmeta">${gr.done} من ${gr.count} تمت · ${esc(gr.created_by || '')} · ${time(gr.created_at)}</span></li>`).join('')
+    : '<li class="msg">لا توجد مهام خاصة بعد.</li>';
+}
+$('groups').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-g]'); if (!b) return;
+  const gr = groups.find(x => x.id === b.dataset.gid); if (!gr) return;
+  if (b.dataset.g === 'copy') return showLink(gr);
+  if (confirm(`حذف «${gr.name || 'مهمة خاصة'}»؟ يتوقف رابطها، والمحطات تبقى في القائمة العامة.`)) {
+    await act({ action: 'group_delete', gid: gr.id }, 'تم حذف المهمة'); loadGroups();
+  }
+});
+
 // ---------- name / admin ----------
 function askName(){ $('nameInput').value = name; $('nameModal').hidden = false; $('nameInput').focus(); }
 $('nameSave').onclick = () => {
@@ -339,7 +444,7 @@ $('pinSave').onclick = async () => {
   try { d = await api({ action: 'checkpin', pin: $('pinInput').value }); }
   catch (e) { return toast(e.message); }
   pin = $('pinInput').value; store.set('admin_pin', pin); store.set('admin_name', d.supervisor || '');
-  $('pinModal').hidden = true; showWho(); render(); toast('أهلاً ' + (d.supervisor || '') + ' — وضع المشرف مفعّل');
+  $('pinModal').hidden = true; showWho(); render(); loadGroups(); toast('أهلاً ' + (d.supervisor || '') + ' — وضع المشرف مفعّل');
 };
 $('logout').onclick = () => { pin = ''; store.set('admin_pin', ''); showWho(); render(); };
 $('addBtn').onclick = async () => {
@@ -371,12 +476,13 @@ if ('geolocation' in navigator) {
 } else setStatus('bad', 'المتصفح لا يدعم تحديد الموقع');
 
 $('refresh').onclick = () => load().then(() => toast('تم التحديث'));
+window.addEventListener('hashchange', () => location.reload());   // switching between the main list and a task link
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 setInterval(() => { if (!document.hidden && !busy) load(); }, 60000);
 
 showWho();
 if (!name) askName();
-load();
+load().then(loadGroups);
 </script>
 </body>
 </html>
