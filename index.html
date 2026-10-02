@@ -158,7 +158,7 @@ li.sel{outline:2px solid #1a73e8;outline-offset:-1px}
     </div>
     <div class="msg" id="addMsg"></div>
     <h2 style="margin-top:16px">المهام الخاصة</h2>
-    <div class="msg">حدّد محطات قريبة من بعض على الخريطة، وأرسل رابطها لفني — لا يرى إلا هذه المحطات.</div>
+    <div class="msg">حدّد محطات قريبة من بعض على الخريطة، وأرسل رابطها لمشغل — لا يرى إلا هذه المحطات.</div>
     <div class="row"><button class="btn amber" id="selStart">＋ إنشاء مهمة خاصة</button></div>
     <ul class="groups" id="groups"></ul>
   </section>
@@ -178,8 +178,8 @@ li.sel{outline:2px solid #1a73e8;outline-offset:-1px}
   <div class="row"><button class="btn primary grow" id="nameSave">حفظ</button></div>
 </div></div>
 <div class="modal" id="confirmModal" hidden><div class="box">
-  <h3 id="cTitle"></h3><p>إذا تأكدت أن الفني أنجز المحطة ونسي يحددها في الموقع. تُسجَّل باسمه مع «بتأكيد المشرف».</p>
-  <input id="cTech" list="techList" autocomplete="off" placeholder="اسم الفني الذي أنجزها">
+  <h3 id="cTitle"></h3><p>إذا تأكدت أن المشغل أنجز المحطة ونسي يحددها في الموقع. تُسجَّل باسمه مع «بتأكيد المشرف».</p>
+  <input id="cTech" list="techList" autocomplete="off" placeholder="اسم المشغل الذي أنجزها">
   <datalist id="techList"></datalist>
   <input id="cNote" autocomplete="off" placeholder="ملاحظة (اختياري) — مثال: تم التأكد بالاتصال" style="margin-top:8px;font-size:15px">
   <div class="row"><button class="btn primary grow" id="cOk">تأكيد الإنجاز</button><button class="btn ghost" id="cCancel">إلغاء</button></div>
@@ -198,7 +198,7 @@ li.sel{outline:2px solid #1a73e8;outline-offset:-1px}
   </div>
 </div>
 <div class="modal" id="linkModal" hidden><div class="box">
-  <h3 id="linkTitle">رابط المهمة جاهز</h3><p>أرسله للفني — يفتح عنده المحطات المحددة فقط.</p>
+  <h3 id="linkTitle">رابط المهمة جاهز</h3><p>أرسله للمشغل — يفتح عنده المحطات المحددة فقط.</p>
   <div class="linkbox" id="linkText"></div>
   <div class="row"><button class="btn primary grow" id="linkCopy">نسخ الرابط</button>
     <a class="btn amber" id="linkWa" target="_blank" rel="noopener">واتساب</a>
@@ -391,7 +391,7 @@ function openConfirm(s){
 $('cCancel').onclick = () => $('confirmModal').hidden = true;
 $('cOk').onclick = async () => {
   const tech = $('cTech').value.trim();
-  if (!tech) return toast('اكتب اسم الفني الذي أنجز المحطة');
+  if (!tech) return toast('اكتب اسم المشغل الذي أنجز المحطة');
   const d = await act({ action: 'confirm', id: cId, tech, note: $('cNote').value.trim() }, 'تم تأكيد الإنجاز ✓');
   if (d) $('confirmModal').hidden = true;
 };
