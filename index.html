@@ -285,7 +285,7 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const id = b.dataset.id, a = b.dataset.a, s = items.find(x => x.id === id);
   if (!name && a !== 'remove') return askName();
-  if (a === 'claim') act({ action: 'claim', id }, 'تم — المحطة محجوزة باسمك');
+  if (a === 'claim') act({ action: 'claim', id }, 'تمت إضافة المحطة لمهامك');
   if (a === 'unclaim') act({ action: 'unclaim', id }, 'تم إلغاء الحجز');
   if (a === 'done') {
     if (!confirm(`تأكيد: تمت معالجة المحطة S${s.station}؟`)) return;
