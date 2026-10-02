@@ -106,17 +106,7 @@ tr:last-child td{border-bottom:0}
   <div class="err" id="err"></div>
 </div></div>
 
-<div class="modal" id="confirmModal" hidden><div class="box">
-  <h3 id="cTitle"></h3>
-  <p>استخدمها إذا تأكدت أن الفني أنجز المحطة ونسي يحددها في الموقع. تُسجَّل باسم الفني مع «بتأكيد المشرف».</p>
-  <label for="cTech">الفني الذي أنجزها</label>
-  <input id="cTech" list="techList" autocomplete="off" placeholder="اختر أو اكتب الاسم">
-  <datalist id="techList"></datalist>
-  <label for="cNote">ملاحظة (اختياري)</label>
-  <textarea id="cNote" placeholder="مثال: تم التأكد بالاتصال مع الفني"></textarea>
-  <div class="err" id="cErr"></div>
-  <div class="row"><button class="btn" id="cOk">تأكيد الإنجاز</button><button class="btn ghost" id="cCancel">إلغاء</button></div>
-</div></div>
+
 
 <header>
   <div class="bar">
@@ -200,7 +190,7 @@ async function load(){
   const d = await res.json();
   if (d.error) throw new Error(d.error);
   data = d;
-  $('updated').textContent = (d.supervisor ? `الدخول: المشرف ${d.supervisor} (يمكنك تأكيد الإنجاز)` : 'الدخول: برمز لوحة التحكم — عرض فقط، ادخل برمز مشرف لتأكيد الإنجاز')
+  $('updated').textContent = 'عرض فقط'
     + ' · آخر تحديث: ' + new Date().toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit' });
   fillSupervisors(); render();
 }
@@ -273,17 +263,14 @@ function render(){
     || order[a.status] - order[b.status] || (t(b.added_at) - t(a.added_at)));
   $('stCount').textContent = rows.length + ' محطة';
   $('stations').innerHTML = rows.length
-    ? `<tr><th>المحطة</th><th>طلبها</th><th>وقت الطلب</th><th>الحالة</th><th>الفني</th><th>وقت المعالجة</th><th>المدة</th>${data.supervisor ? '<th></th>' : ''}</tr>` +
+    ? `<tr><th>المحطة</th><th>طلبها</th><th>وقت الطلب</th><th>الحالة</th><th>الفني</th><th>وقت المعالجة</th><th>المدة</th></tr>` +
       rows.slice(0, shown).map(i => {
         const tech = i.status === 'done' ? i.done_by : i.claimed_by;
         const dur = i.status === 'done' ? t(i.done_at) - t(i.added_at) : Date.now() - t(i.added_at);
         return `<tr><td class="num">S${i.station}</td><td>${esc(i.added_by || 'غير محدد')}</td><td>${fmtTime(t(i.added_at))}</td>
           <td><span class="pill ${i.status}">${STATUS[i.status] || i.status}</span>${i.priority === 'high' ? ' <span class="pill red">عاجلة</span>' : ''}</td>
           <td>${esc(tech) || '—'}${i.confirmed_by ? `<br><span class="pill conf">بتأكيد ${esc(i.confirmed_by)}</span>` : ''}</td><td>${i.status === 'done' ? fmtTime(t(i.done_at)) : '—'}</td>
-          <td class="${i.status === 'done' ? '' : 'muted'}">${fmtDur(dur)}${i.status === 'done' ? '' : ' (جارية)'}</td>
-          ${data.supervisor ? `<td>${i.status === 'done'
-            ? `<button class="act" data-a="undo" data-id="${i.id}">تراجع</button>`
-            : `<button class="act go" data-a="confirm" data-id="${i.id}">تأكيد الإنجاز</button>`}</td>` : ''}</tr>`;
+          <td class="${i.status === 'done' ? '' : 'muted'}">${fmtDur(dur)}${i.status === 'done' ? '' : ' (جارية)'}</td></tr>`;
       }).join('')
     : '<tr><td class="empty">لا توجد محطات مطابقة</td></tr>';
   $('more').hidden = rows.length <= shown;
@@ -292,38 +279,6 @@ function render(){
     ? data.log.slice(0, 25).map(l => `<li><time>${fmtTime(t(l.time))}</time><span><b>${esc(l.who)}</b> ${ACTION[l.action] || esc(l.action)} <b dir="ltr">S${esc(l.station)}</b>${l.note ? ` <span class="muted">· ${esc(l.note)}</span>` : ''}</span></li>`).join('')
     : '<li class="empty">لا يوجد نشاط بعد</li>';
 }
-
-// ---------- supervisor actions (confirm on behalf of a technician / undo) ----------
-async function post(body){
-  const d = await (await fetch(API, { method: 'POST', body: JSON.stringify({ pin, ...body }) })).json();
-  if (d.error) throw new Error(d.error);
-  await load();
-}
-let cId = null;
-$('stations').addEventListener('click', async e => {
-  const b = e.target.closest('button[data-a]'); if (!b) return;
-  const it = data.items.find(i => i.id === b.dataset.id); if (!it) return;
-  if (b.dataset.a === 'undo') {
-    if (!confirm(`التراجع عن إنجاز S${it.station}؟ ترجع المحطة للقائمة المتبقية.`)) return;
-    try { await post({ action: 'undo', id: it.id }); } catch (err) { alert(err.message); }
-    return;
-  }
-  cId = it.id;
-  const techs = [...new Set(data.items.flatMap(i => [i.done_by, i.claimed_by]).concat((data.log || []).filter(l => !String(l.who).startsWith('المشرف')).map(l => l.who)).filter(Boolean))].sort();
-  $('techList').innerHTML = techs.map(n => `<option value="${esc(n)}">`).join('');
-  $('cTitle').textContent = `تأكيد إنجاز S${it.station}`;
-  $('cTech').value = it.claimed_by || ''; $('cNote').value = ''; $('cErr').textContent = '';
-  $('confirmModal').hidden = false; $('cTech').focus();
-});
-$('cCancel').onclick = () => $('confirmModal').hidden = true;
-$('cOk').onclick = async () => {
-  const tech = $('cTech').value.trim();
-  if (!tech) { $('cErr').textContent = 'اختر الفني الذي أنجز المحطة'; return; }
-  $('cOk').disabled = true;
-  try { await post({ action: 'confirm', id: cId, tech, note: $('cNote').value.trim() }); $('confirmModal').hidden = true; }
-  catch (err) { $('cErr').textContent = err.message; }
-  finally { $('cOk').disabled = false; }
-};
 
 async function enter(){
   $('err').textContent = '';

@@ -139,6 +139,13 @@ summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
   <input id="nameInput" autocomplete="name" placeholder="مثال: أحمد العتيبي">
   <div class="row"><button class="btn primary grow" id="nameSave">حفظ</button></div>
 </div></div>
+<div class="modal" id="confirmModal" hidden><div class="box">
+  <h3 id="cTitle"></h3><p>إذا تأكدت أن الفني أنجز المحطة ونسي يحددها في الموقع. تُسجَّل باسمه مع «بتأكيد المشرف».</p>
+  <input id="cTech" list="techList" autocomplete="off" placeholder="اسم الفني الذي أنجزها">
+  <datalist id="techList"></datalist>
+  <input id="cNote" autocomplete="off" placeholder="ملاحظة (اختياري) — مثال: تم التأكد بالاتصال" style="margin-top:8px;font-size:15px">
+  <div class="row"><button class="btn primary grow" id="cOk">تأكيد الإنجاز</button><button class="btn ghost" id="cCancel">إلغاء</button></div>
+</div></div>
 <div class="modal" id="pinModal" hidden><div class="box">
   <h3>دخول المشرف</h3><p>أدخل رمز المشرف.</p>
   <input id="pinInput" type="password" inputmode="numeric" autocomplete="off">
@@ -246,6 +253,7 @@ function card(s, i, first){
   const urgent = s.priority === 'high' && s.status !== 'done';
   if (urgent) tag = `<span class="tag red">⚠ عاجلة</span> ` + tag;
   if (pin && s.status !== 'done') btns += `<button class="btn ${urgent ? 'ghost' : 'danger'}" data-a="priority" data-id="${s.id}">${urgent ? 'إلغاء العجلة' : '⚠ اجعلها عاجلة'}</button>`;
+  if (pin && s.status !== 'done') btns += `<button class="btn ghost" data-a="confirm" data-id="${s.id}">✓ تأكيد الإنجاز</button>`;
   if (pin) btns += `<button class="btn danger" data-a="remove" data-id="${s.id}">حذف</button>`;
   const meta = d == null ? '' : (first && !isTop(s) ? 'الأقرب لك · ' : '') + fmt(d);
   return `<li class="${s.status}${urgent ? ' urgent' : ''}${isTop(s) ? ' top' : ''}${first && !isTop(s) ? ' first' : ''}">
@@ -284,7 +292,8 @@ document.addEventListener('click', async e => {
   }
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const id = b.dataset.id, a = b.dataset.a, s = items.find(x => x.id === id);
-  if (!name && a !== 'remove') return askName();
+  if (!name && !['remove', 'confirm', 'priority'].includes(a)) return askName();
+  if (a === 'confirm') return openConfirm(s);
   if (a === 'claim') act({ action: 'claim', id }, 'تمت إضافة المحطة لمهامك');
   if (a === 'unclaim') act({ action: 'unclaim', id }, 'تم إلغاء الحجز');
   if (a === 'done') {
@@ -295,6 +304,24 @@ document.addEventListener('click', async e => {
   if (a === 'priority') act({ action: 'priority', id, priority: s.priority === 'high' ? '' : 'high' }, s.priority === 'high' ? 'أُلغيت العجلة' : 'أصبحت عاجلة — تظهر أعلى القائمة للجميع');
   if (a === 'remove' && confirm(`حذف S${s.station} من القائمة؟`)) act({ action: 'remove', id }, 'تم الحذف');
 });
+
+// ---------- supervisor: confirm completion on behalf of a technician ----------
+let cId = null;
+function openConfirm(s){
+  cId = s.id;
+  const techs = [...new Set(items.flatMap(i => [i.claimed_by, i.done_by]).filter(Boolean))].sort();
+  $('techList').innerHTML = techs.map(n => `<option value="${esc(n)}">`).join('');
+  $('cTitle').textContent = `تأكيد إنجاز S${s.station}`;
+  $('cTech').value = s.claimed_by || ''; $('cNote').value = '';
+  $('confirmModal').hidden = false; $('cTech').focus();
+}
+$('cCancel').onclick = () => $('confirmModal').hidden = true;
+$('cOk').onclick = async () => {
+  const tech = $('cTech').value.trim();
+  if (!tech) return toast('اكتب اسم الفني الذي أنجز المحطة');
+  const d = await act({ action: 'confirm', id: cId, tech, note: $('cNote').value.trim() }, 'تم تأكيد الإنجاز ✓');
+  if (d) $('confirmModal').hidden = true;
+};
 
 // ---------- name / admin ----------
 function askName(){ $('nameInput').value = name; $('nameModal').hidden = false; $('nameInput').focus(); }
