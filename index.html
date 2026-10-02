@@ -373,9 +373,26 @@ async function api(body){
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   if (G && data.group) { const t = data.group.name || 'مهمة خاصة'; $('title').textContent = t; document.title = t; }
-  if (data.items) { items = data.items.map(i => ({ ...i, lat: +i.lat, lng: +i.lng })); render(); }
+  // while optimistic changes are still on their way, only the last reply may replace the list
+  if (data.items && (body ? pending <= 1 : pending === 0)) { items = data.items.map(i => ({ ...i, lat: +i.lat, lng: +i.lng })); render(); }
   return data;
 }
+
+// ---------- optimistic actions: the screen changes on tap, the server catches up in the background ----------
+// Apps Script answers in ~2–3 s at best, so waiting for it made every tap feel stuck.
+let pending = 0, queue = Promise.resolve();
+function quick(body, change, okText){
+  const before = JSON.stringify(items);
+  change();                      // apply locally, right now
+  render();
+  if (okText) toast(okText);
+  pending++;
+  queue = queue.then(() => api({ name, pin, g: G, ...body }))
+    .catch(e => { items = JSON.parse(before); render(); toast(e.message); })   // rejected: put it back, say why
+    .finally(() => { pending--; });
+}
+const nowIso = () => new Date().toISOString();
+const patch = (id, fields) => () => { const s = items.find(x => x.id === id); if (s) Object.assign(s, fields); };
 async function act(body, okText){
   if (busy) return; busy = true; document.body.style.cursor = 'progress';
   try { const d = await api({ name, pin, g: G, ...body }); if (okText) toast(okText); return d; }
@@ -617,16 +634,23 @@ document.addEventListener('click', async e => {
   if (!s) return;
   if (!name && ['claim', 'unclaim', 'done', 'undo'].includes(a)) return askName();
   if (a === 'confirm') { closeSheet(); return openConfirm(s); }
-  if (a === 'claim') act({ action: 'claim', id }, 'تمت إضافة المحطة لمهامك');
-  if (a === 'unclaim') act({ action: 'unclaim', id }, 'تم إلغاء الحجز');
+  if (a === 'claim') quick({ action: 'claim', id }, patch(id, { status: 'claimed', claimed_by: name, claimed_at: nowIso() }), 'تمت إضافة المحطة لمهامك');
+  if (a === 'unclaim') quick({ action: 'unclaim', id }, patch(id, { status: 'open', claimed_by: '', claimed_at: '' }), 'تم إلغاء الحجز');
   if (a === 'done') {
     if (!confirm(`تأكيد: تمت معالجة المحطة S${s.station}؟`)) return;
-    const d = await act({ action: 'done', id, lat: me.lat, lng: me.lng, acc: me.acc }, 'تم تسجيل المعالجة ✓');
-    if (d) closeSheet();
+    closeSheet();
+    quick({ action: 'done', id, lat: me.lat, lng: me.lng, acc: me.acc }, patch(id, { status: 'done', done_by: name, done_at: nowIso(), confirmed_by: '' }), 'تم تسجيل المعالجة ✓');
   }
-  if (a === 'undo' && confirm(`التراجع عن معالجة S${s.station}؟`)) act({ action: 'undo', id }, 'تم التراجع');
-  if (a === 'priority') act({ action: 'priority', id, priority: s.priority === 'high' ? '' : 'high' }, s.priority === 'high' ? 'أُلغيت العجلة' : 'أصبحت عاجلة — تظهر أعلى القائمة للجميع');
-  if (a === 'remove' && confirm(`حذف S${s.station} من القائمة؟`)) { const d = await act({ action: 'remove', id }, 'تم الحذف'); if (d) closeSheet(); }
+  if (a === 'undo' && confirm(`التراجع عن معالجة S${s.station}؟`))
+    quick({ action: 'undo', id }, patch(id, { status: 'open', claimed_by: '', claimed_at: '', done_by: '', done_at: '', confirmed_by: '' }), 'تم التراجع');
+  if (a === 'priority') {
+    const high = s.priority !== 'high';
+    quick({ action: 'priority', id, priority: high ? 'high' : '' }, patch(id, { priority: high ? 'high' : '' }), high ? 'أصبحت عاجلة — تظهر أعلى القائمة للجميع' : 'أُلغيت العجلة');
+  }
+  if (a === 'remove' && confirm(`حذف S${s.station} من القائمة؟`)) {
+    closeSheet();
+    quick({ action: 'remove', id }, () => { items = items.filter(x => x.id !== id); }, 'تم الحذف');
+  }
 });
 
 // ---------- supervisor: confirm completion on behalf of an operator ----------
@@ -813,7 +837,7 @@ if ('geolocation' in navigator) {
 $('refresh').onclick = () => load().then(() => toast('تم التحديث'));
 window.addEventListener('hashchange', () => location.reload());   // switching between the main list and a task link
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
-setInterval(() => { if (!document.hidden && !busy) load(); }, 60000);
+setInterval(() => { if (!document.hidden && !busy && !pending) load(); }, 60000);
 
 showWho();
 if (!name) askName();
