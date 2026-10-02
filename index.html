@@ -118,7 +118,7 @@ summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
 <div id="map"></div>
 <main>
   <section class="panel" id="admin" hidden>
-    <h2>إضافة محطات (المشرف)</h2>
+    <h2>إضافة محطات — <span id="supName"></span></h2>
     <textarea id="nums" inputmode="numeric" placeholder="اكتب رقم محطة أو أكثر، مثال: 15442 554 4468"></textarea>
     <div class="row">
       <button class="btn primary" id="addBtn">إضافة</button>
@@ -131,7 +131,7 @@ summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
   <div class="empty" id="empty" hidden>لا توجد محطات حالياً.</div>
   <details id="doneWrap" hidden><summary id="doneSum"></summary><ol id="doneList"></ol></details>
   <p class="note">المسافات تقريبية (خط مستقيم). «تمت المعالجة» يتفعّل عندما تكون ضمن ٣٠ م من المحطة.<br>
-    <a href="#" id="adminLink" style="color:inherit">دخول المشرف</a></p>
+    <a href="#" id="adminLink" style="color:inherit">دخول المشرف</a> · <a href="dashboard.html" style="color:inherit">لوحة التحكم</a></p>
 </main>
 
 <div class="modal" id="nameModal" hidden><div class="box">
@@ -302,15 +302,17 @@ $('nameSave').onclick = () => {
   const v = $('nameInput').value.trim(); if (!v) return;
   name = v; store.set('tech_name', v); $('nameModal').hidden = true; showWho(); render();
 };
-function showWho(){ $('who').textContent = name ? '👤 ' + name : 'اسمك'; $('admin').hidden = !pin; $('adminLink').hidden = !!pin; }
+function showWho(){ $('who').textContent = name ? '👤 ' + name : 'اسمك'; $('admin').hidden = !pin; $('adminLink').hidden = !!pin; $('supName').textContent = store.get('admin_name') || 'المشرف'; }
 $('who').onclick = askName;
 
 $('adminLink').onclick = e => { e.preventDefault(); $('pinInput').value = ''; $('pinModal').hidden = false; $('pinInput').focus(); };
 $('pinCancel').onclick = () => $('pinModal').hidden = true;
 $('pinSave').onclick = async () => {
-  try { await api({ action: 'checkpin', pin: $('pinInput').value }); }
+  let d;
+  try { d = await api({ action: 'checkpin', pin: $('pinInput').value }); }
   catch (e) { return toast(e.message); }
-  pin = $('pinInput').value; store.set('admin_pin', pin); $('pinModal').hidden = true; showWho(); render(); toast('وضع المشرف مفعّل');
+  pin = $('pinInput').value; store.set('admin_pin', pin); store.set('admin_name', d.supervisor || '');
+  $('pinModal').hidden = true; showWho(); render(); toast('أهلاً ' + (d.supervisor || '') + ' — وضع المشرف مفعّل');
 };
 $('logout').onclick = () => { pin = ''; store.set('admin_pin', ''); showWho(); render(); };
 $('addBtn').onclick = async () => {
