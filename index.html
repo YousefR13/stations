@@ -4,207 +4,310 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#001F5E">
 <title>محطات المهمة</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* SE brand palette (SE BRAND.pdf §07). Readex Pro stands in for the private SE Heartbeat font.
+   Light only on purpose: the app is used outdoors in daylight. */
 :root{
-  --bg:#f4f6f8; --card:#ffffff; --ink:#14202b; --muted:#66727e; --line:#e3e7eb;
-  --brand:#0b6e4f; --brand-ink:#ffffff; --near:#e8f5ef;
-  --amber:#b45309; --amber-bg:#fff4e0; --done:#8a96a1; --danger:#b42318; --danger-bg:#fdecea; --urgent-bg:#fff1f0;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a;
-    --brand:#2fb383; --brand-ink:#06140e; --near:#13281f;
-    --amber:#f5a35b; --amber-bg:#2a1d10; --done:#6b7782; --danger:#f97066; --danger-bg:#2c1513; --urgent-bg:#2a1414;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a;
-  --brand:#2fb383; --brand-ink:#06140e; --near:#13281f;
-  --amber:#f5a35b; --amber-bg:#2a1d10; --done:#6b7782; --danger:#f97066; --danger-bg:#2c1513; --urgent-bg:#2a1414;
+  --db:#001F5E; --edb:#00183A; --blue:#0027B9; --mb:#0080FF; --lb:#32C2FF; --g:#00FF86;
+  --tg:#00B476; --to:#EF9B00; --tr:#E10054;
+  --edb40:#9BA2AF; --edb25:#C0C5CD; --edb10:#E6E8EB; --edb5:#F2F3F5;
+  --ink:#00183A; --muted:#5B6575; --card:#fff;
+  --red-bg:#FDE6EE; --red-ink:#A8003F; --org-bg:#FFF3DC; --org-ink:#8A5400; --grn-bg:#DDF6EC; --grn-ink:#00744C;
+  --nav-h:64px;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);
-  font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;-webkit-text-size-adjust:100%}
-button,input,textarea{font:inherit}
-header{position:sticky;top:0;z-index:1000;background:var(--card);border-bottom:1px solid var(--line);
-  padding:12px 16px 10px;padding-top:max(12px,env(safe-area-inset-top))}
-.top{display:flex;align-items:center;gap:10px}
-h1{font-size:18px;margin:0;font-weight:700;flex:1}
-.icon-btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;
-  padding:6px 10px;font-size:14px;cursor:pointer}
-.sub{margin-top:6px;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
-.sub.ok .dot{background:var(--brand)} .sub.bad{color:var(--amber)} .sub.bad .dot{background:var(--amber)}
-.progress{height:6px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden}
-.progress span{display:block;height:100%;background:var(--brand);transition:width .3s}
-#map{height:34vh;min-height:200px;background:var(--line)}
-main{padding:12px 16px 40px;max-width:720px;margin:0 auto}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
-.panel h2{font-size:15px;margin:0 0 8px}
-textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:10px;padding:10px;
-  background:var(--bg);color:var(--ink);font-size:16px;resize:vertical;direction:ltr;text-align:right}
-.row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
-.msg{font-size:13px;color:var(--muted);line-height:1.7}
-ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-li{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-li.first{background:var(--near);border-color:var(--brand)}
-li.claimed{border-color:var(--amber)}
-li.urgent{border-color:var(--danger);border-width:2px}
-li.urgent.top{background:var(--urgent-bg)}
-li.urgent.top .rank{background:var(--danger);color:#fff}
-li.done{opacity:.75}
-.head{display:flex;align-items:center;gap:12px}
-.rank{width:30px;height:30px;border-radius:50%;background:var(--bg);display:grid;place-items:center;
-  font-size:13px;font-weight:600;color:var(--muted);flex:none}
-li.first .rank{background:var(--brand);color:var(--brand-ink)}
-li.done .rank{background:var(--done);color:#fff}
-.info{flex:1;min-width:0}
-.num{font-size:19px;font-weight:700;direction:ltr;text-align:right;cursor:pointer}
-li.done .num{text-decoration:line-through;text-decoration-thickness:1px}
-.meta{font-size:13px;color:var(--muted);margin-top:2px}
-.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;margin-top:4px}
-.tag.amber{background:var(--amber-bg);color:var(--amber)}
-.tag.ok{background:var(--near);color:var(--brand)}
-.tag.red{background:var(--danger-bg);color:var(--danger)}
-.actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.btn{border:0;border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;cursor:pointer;
-  text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
-.btn.primary{background:var(--brand);color:var(--brand-ink)}
-.btn.amber{background:var(--amber-bg);color:var(--amber)}
-.btn.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
-.btn.danger{background:var(--danger-bg);color:var(--danger)}
-.btn[disabled]{opacity:.45;cursor:not-allowed}
-.btn.grow{flex:1}
-details{margin-top:16px}
-summary{cursor:pointer;font-weight:600;padding:8px 0;color:var(--muted)}
-.empty{padding:28px 8px;text-align:center;color:var(--muted);line-height:1.8}
-.note{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
-.toast{position:fixed;left:16px;right:16px;bottom:max(16px,env(safe-area-inset-bottom));z-index:2000;
-  background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;font-size:14px;
-  text-align:center;opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none}
-.toast.show{opacity:1;transform:none}
-.modal{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px}
-.modal[hidden]{display:none}
-.modal .box{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:360px}
-.modal h3{margin:0 0 6px;font-size:17px}
-.modal p{margin:0 0 12px;font-size:13px;color:var(--muted)}
-.modal input{width:100%;font-size:17px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
-  background:var(--bg);color:var(--ink)}
+html,body{margin:0;background:var(--edb5);color:var(--ink);font-family:"Readex Pro",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+  -webkit-text-size-adjust:100%;line-height:1.5}
+button,input,textarea{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+[hidden]{display:none!important}
+body{padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px)}
+
+/* ---------- header ---------- */
+.ah{background:var(--db);color:#fff;position:relative;overflow:hidden;padding:max(12px,env(safe-area-inset-top)) 0 14px}
+.ah-top{display:flex;align-items:center;gap:10px;padding:0 16px;position:relative;z-index:1}
+.ah-top .ttl{flex:1;min-width:0}
+.ah h1{font-size:20px;font-weight:600;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ah .who{font-size:12.5px;color:#C9D6F2;font-weight:300;background:none;padding:0}
+.round{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;color:#fff;font-weight:600;flex:none}
+.loc{display:flex;align-items:center;gap:7px;margin:8px 16px 0;font-size:12.5px;color:#C9D6F2;font-weight:300;position:relative;z-index:1}
+.loc i{width:8px;height:8px;border-radius:50%;background:var(--edb40);flex:none}
+.loc.ok i{background:var(--g);box-shadow:0 0 0 3px rgba(0,255,134,.2)}
+.loc.bad{color:#FFD58A} .loc.bad i{background:var(--to)}
+.ah svg.wave{position:absolute;left:0;right:0;bottom:-6px;width:100%;height:80px;opacity:.55;pointer-events:none}
+.near{margin:12px 14px 0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:12px 14px;position:relative;z-index:1}
+.near .big{display:flex;align-items:baseline;gap:8px}
+.near .big b{font-size:36px;font-weight:600;line-height:1}
+.near .big span{font-size:15px;color:#DDE6F7}
+.near .sub{font-size:12.5px;color:#AFC0E0;margin-top:3px;font-weight:300}
+.chips{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.chips button{font-size:13px;padding:6px 13px;border-radius:999px;background:rgba(255,255,255,.1);color:#DDE6F7}
+.chips button.on{background:#fff;color:var(--db);font-weight:600}
+.prog{margin:12px 16px 0;display:flex;align-items:center;gap:14px;position:relative;z-index:1}
+.ring{width:76px;height:76px;flex:none}
+.prog b{font-size:20px;font-weight:600;display:block}
+.prog span{font-size:12.5px;color:#C9D6F2;font-weight:300}
+
+/* ---------- map ---------- */
+.mapwrap{margin:12px 14px 0;border-radius:16px;overflow:hidden;position:relative;background:var(--edb10);box-shadow:0 1px 2px rgba(0,24,58,.06)}
+#map{height:150px;transition:height .25s}
+.mapwrap.big #map{height:58vh}
+.mapbtn{position:absolute;left:10px;bottom:10px;z-index:500;background:#fff;color:var(--db);font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .leaflet-container{font-family:inherit}
-.pin{border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 1px 3px rgba(0,0,0,.35);
-  transform:translate(-50%,-50%);display:block;font-size:0;background:var(--brand);color:var(--brand-ink)}
-.pin.claimed{background:#d97706;color:#fff} .pin.done{background:#9aa5af;color:#fff}
-.pin.urgent{background:#d92d20;color:#fff;width:18px;height:18px}
-.labels .pin{width:auto;height:auto;border-radius:12px;font-size:11px;font-weight:700;padding:1px 6px;
-  white-space:nowrap;display:inline-block}
-.pin.sel{outline:3px solid #1a73e8;outline-offset:2px}
-#map.big{height:58vh}
-.selbar{position:fixed;left:0;right:0;bottom:0;z-index:1500;background:var(--card);border-top:1px solid var(--line);
-  padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(0,0,0,.08)}
-.selbar[hidden]{display:none}
-.selbar .row{margin-top:0}
-.selbar input{flex:1;min-width:120px;font-size:16px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
-.selcount{font-weight:700;font-size:14px;margin-bottom:8px}
-li.sel{outline:2px solid #1a73e8;outline-offset:-1px}
-.groups{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
-.groups li{padding:10px 12px;border-radius:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.groups .gname{font-weight:700;flex:1;min-width:120px}
-.groups .gmeta{font-size:12px;color:var(--muted);width:100%}
-.linkbox{direction:ltr;font-size:13px;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:4px}
-.alert{background:var(--danger-bg);color:var(--danger);border:2px solid var(--danger);border-radius:12px;
-  padding:10px 12px;margin-top:10px;font-size:14px;line-height:1.7}
-.alert[hidden]{display:none}
-.alert b{display:block;font-size:15px}
-.alert .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.alert .chips span{background:var(--card);border:1px solid var(--danger);border-radius:999px;padding:1px 10px;font-weight:700;direction:ltr}
-.sortbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:var(--muted)}
-.sortbar[hidden]{display:none}
-.seg{display:flex;background:var(--line);border-radius:10px;padding:3px}
-.seg button{border:0;background:none;padding:6px 12px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--muted)}
-.seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.added{font-size:12px;color:var(--muted);margin-top:2px}
+.pin{border:2px solid #fff;border-radius:50%;width:14px;height:14px;box-shadow:0 1px 3px rgba(0,0,0,.35);transform:translate(-50%,-50%);
+  display:block;font-size:0;background:var(--blue);color:#fff}
+.pin.claimed{background:var(--to)} .pin.done{background:var(--edb40)}
+.pin.urgent{background:var(--tr);width:18px;height:18px}
+.pin.sel{outline:3px solid var(--mb);outline-offset:2px}
+.labels .pin{width:auto;height:auto;border-radius:12px;font-size:11px;font-weight:600;padding:1px 7px;white-space:nowrap;display:inline-block}
 .me{width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(26,115,232,.25)}
+
+/* ---------- content ---------- */
+main{max-width:720px;margin:0 auto}
+.view{padding:12px 14px 0;display:flex;flex-direction:column;gap:10px}
+.urgentbar{width:100%;text-align:right;display:flex;align-items:center;gap:8px;background:var(--red-bg);color:var(--red-ink);border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:500}
+.sect{font-size:13px;font-weight:600;color:var(--muted);margin:6px 2px 0}
+.empty{background:#fff;border-radius:16px;padding:22px 16px;text-align:center;color:var(--muted);font-size:14px}
+
+/* station card: one primary action — always the next logical step */
+.st{background:var(--card);border-radius:16px;padding:12px 14px 12px 12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 2px rgba(0,24,58,.06);position:relative;overflow:hidden}
+.st::before{content:"";position:absolute;top:0;bottom:0;right:0;width:4px;background:var(--edb25)}
+.st.open::before{background:var(--blue)} .st.claimed::before{background:var(--to)} .st.done::before{background:var(--tg)} .st.urgent::before{background:var(--tr)}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.num{font-size:20px;font-weight:600;direction:ltr;letter-spacing:.2px;cursor:pointer}
+.st.muted .num{color:var(--muted)}
+.st.done .num{text-decoration:line-through;text-decoration-thickness:1.5px;color:var(--muted)}
+.dist{margin-inline-start:auto;text-align:left;line-height:1.2}
+.dist b{display:block;font-size:17px;font-weight:600}
+.dist span{font-size:11.5px;color:var(--muted);font-weight:300}
+.pill{font-size:12px;font-weight:500;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.pill.u{background:var(--red-bg);color:var(--red-ink)} .pill.c{background:var(--org-bg);color:var(--org-ink)}
+.pill.d{background:var(--grn-bg);color:var(--grn-ink)} .pill.m{background:var(--edb5);color:var(--muted)}
+.added{font-size:12px;color:var(--muted);font-weight:300;width:100%}
+.acts{display:flex;gap:8px}
+.btn{height:48px;border-radius:12px;font-size:15.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:0 16px;text-decoration:none;white-space:nowrap}
+.btn.pri{flex:1;background:var(--blue);color:#fff}
+.btn.go{flex:1;background:var(--tg);color:#fff;font-size:16.5px}
+.btn.sec{background:var(--edb5);color:var(--db)}
+.btn.warn{background:var(--red-bg);color:var(--red-ink)}
+.btn.ico{width:48px;padding:0;background:var(--edb5);color:var(--blue);flex:none}
+.btn.huge{flex:none;width:100%;height:58px;font-size:18px;border-radius:16px}
+.btn.sm{height:38px;font-size:13.5px;padding:0 12px;border-radius:10px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+details.done-wrap summary{list-style:none;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--muted);padding:8px 2px}
+details.done-wrap summary::-webkit-details-marker{display:none}
+details.done-wrap[open] summary{margin-bottom:8px}
+details.done-wrap .stack{display:flex;flex-direction:column;gap:10px}
+.foot{text-align:center;font-size:12px;color:var(--muted);font-weight:300;padding:10px 0 4px}
+.foot a{color:inherit}
+
+/* my tasks: steps */
+.step{display:flex;gap:12px}
+.step .rail{display:flex;flex-direction:column;align-items:center;width:30px;flex:none}
+.step .dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13.5px;font-weight:600;color:#fff;background:var(--blue)}
+.step.done .dot{background:var(--tg)}
+.step .line{flex:1;width:2px;background:var(--edb25);margin:2px 0}
+.step:last-child .line{display:none}
+.step .st{flex:1;margin-bottom:10px}
+
+/* supervisor */
+.card{background:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 2px rgba(0,24,58,.06)}
+.card h2{font-size:15.5px;font-weight:600;margin:0}
+.hint{font-size:12.5px;color:var(--muted);font-weight:300}
+.field{background:#fff;border:1.5px solid var(--edb25);border-radius:14px;padding:8px 10px;min-height:56px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;cursor:text}
+.field:focus-within{border-color:var(--blue)}
+.field input{flex:1;min-width:110px;border:0;outline:0;font-size:16px;padding:6px 2px;direction:ltr;text-align:right;background:none}
+.tok{display:inline-flex;align-items:center;gap:6px;background:var(--edb5);border-radius:8px;padding:4px 9px;font-size:14px;font-weight:600;direction:ltr}
+.tok button{color:var(--muted);font-size:15px;line-height:1;padding:0 2px}
+.tok.bad{background:var(--red-bg);color:var(--red-ink);outline:1.5px solid var(--tr)}
+.toggle[aria-pressed="true"]{background:var(--tr);color:#fff}
+.alert{background:var(--red-bg);border:1.5px solid var(--tr);border-radius:14px;padding:10px 12px;color:var(--red-ink);font-size:13px}
+.alert b{display:block;font-size:14px}
+.okmsg{font-size:13px;color:var(--muted)}
+.seg{display:flex;background:#fff;border-radius:12px;padding:4px;gap:4px;box-shadow:0 1px 2px rgba(0,24,58,.06)}
+.seg button{flex:1;text-align:center;font-size:13.5px;padding:9px 0;border-radius:9px;color:var(--muted)}
+.seg button.on{background:var(--db);color:#fff;font-weight:600}
+.mini{display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:10px 12px;font-size:13.5px;box-shadow:0 1px 2px rgba(0,24,58,.05);width:100%;text-align:right}
+.mini .num{font-size:16px}
+.mini .meta{display:flex;flex-direction:column;line-height:1.3;min-width:0}
+.mini small{color:var(--muted);font-size:11.5px;font-weight:300}
+.mini .end{margin-inline-start:auto;display:flex;align-items:center;gap:8px}
+.mini .more{color:var(--blue);font-weight:600;font-size:18px;padding:0 4px}
+.mini.sel{outline:2px solid var(--mb)}
+.chk{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--edb25);flex:none;display:grid;place-items:center}
+.chk.on{background:var(--blue);border-color:var(--blue)}
+.groups{display:flex;flex-direction:column;gap:8px}
+.grp{background:#fff;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(0,24,58,.05)}
+.grp b{flex:1;min-width:120px;font-weight:600}
+.grp small{width:100%;color:var(--muted);font-size:12px;font-weight:300}
+.selbar{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:1400;background:var(--db);color:#fff;
+  padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 -8px 24px rgba(0,24,58,.2)}
+.selbar .top{display:flex;align-items:center;gap:8px}
+.selbar b{font-size:15px;flex:1}
+.selbar input{flex:1;min-width:0;height:44px;border-radius:12px;border:0;padding:0 12px;font-size:16px;color:var(--ink)}
+.selbar .btn.pri{flex:none;background:var(--g);color:var(--edb)}
+.selbar .btn.sec{flex:none;background:rgba(255,255,255,.12);color:#fff}
+
+/* ---------- bottom nav ---------- */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:1500;display:flex;background:#fff;border-top:1px solid var(--edb10);
+  height:calc(var(--nav-h) + env(safe-area-inset-bottom));padding:6px 8px env(safe-area-inset-bottom)}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;color:var(--edb40);font-weight:500;position:relative}
+.nav button.on{color:var(--blue)}
+.nav em{position:absolute;top:2px;left:calc(50% - 22px);background:var(--to);color:#fff;font-style:normal;font-size:10.5px;border-radius:999px;padding:0 6px;font-weight:600;min-width:18px;text-align:center}
+
+/* ---------- bottom sheet (station detail / at the station) ---------- */
+.scrim{position:fixed;inset:0;z-index:1700;background:rgba(0,24,58,.35)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:1800;background:#fff;border-radius:24px 24px 0 0;max-width:720px;margin:0 auto;
+  padding:10px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,24,58,.15);display:flex;flex-direction:column;gap:12px;
+  max-height:85vh;overflow:auto}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--edb25);margin:0 auto 2px}
+.here{display:flex;align-items:center;gap:10px;background:var(--grn-bg);border-radius:14px;padding:11px 12px;color:var(--grn-ink);font-size:14px;font-weight:500}
+.here i{width:10px;height:10px;border-radius:50%;background:var(--tg);box-shadow:0 0 0 4px rgba(0,180,118,.2);flex:none}
+.far{display:flex;align-items:center;gap:8px;background:var(--edb5);border-radius:14px;padding:11px 12px;font-size:14px}
+.sheet .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sheet .grid .btn{width:100%}
+.sheet .note{font-size:12.5px;color:var(--muted);text-align:center;font-weight:300}
+
+/* ---------- modals & toast ---------- */
+.modal{position:fixed;inset:0;z-index:3000;background:rgba(0,24,58,.45);display:grid;place-items:center;padding:16px}
+.modal .box{background:#fff;border-radius:20px;padding:18px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:10px}
+.modal h3{margin:0;font-size:18px;font-weight:600;color:var(--db)}
+.modal p{margin:0;font-size:13.5px;color:var(--muted);font-weight:300}
+.modal input{width:100%;font-size:17px;height:50px;padding:0 12px;border-radius:12px;border:1.5px solid var(--edb25);background:#fff}
+.modal input:focus{outline:0;border-color:var(--blue)}
+.modal .acts .btn{flex:1}
+.linkbox{direction:ltr;font-size:13px;word-break:break-all;background:var(--edb5);border-radius:12px;padding:10px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);z-index:4000;max-width:560px;margin:0 auto;
+  background:var(--db);color:#fff;padding:13px 16px;border-radius:14px;font-size:14.5px;font-weight:500;text-align:center;
+  opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none;box-shadow:0 10px 24px rgba(0,24,58,.25)}
+.toast.show{opacity:1;transform:none}
 </style>
 </head>
 <body>
-<header>
-  <div class="top">
-    <h1>محطات المهمة</h1>
-    <button class="icon-btn" id="refresh" title="تحديث">↻ تحديث</button>
-    <button class="icon-btn" id="who"></button>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="wg" x1="0" x2="1"><stop offset="0" stop-color="#0027B9" stop-opacity="0"/><stop offset=".45" stop-color="#0080FF"/><stop offset="1" stop-color="#00FF86"/></linearGradient>
+    <symbol id="wave" viewBox="0 0 400 80" preserveAspectRatio="none">
+      <g fill="none" stroke="url(#wg)" stroke-width=".7">
+        <path d="M0 62 C70 62 90 70 140 52 S220 6 270 20 S340 70 400 40"/><path d="M0 64 C70 64 92 72 142 55 S222 10 272 24 S342 72 400 44"/>
+        <path d="M0 66 C70 66 94 74 144 58 S224 14 274 28 S344 74 400 48"/><path d="M0 68 C70 68 96 76 146 61 S226 18 276 32 S346 76 400 52"/>
+        <path d="M0 70 C70 70 98 78 148 64 S228 22 278 36 S348 78 400 56"/><path d="M0 72 C70 72 100 80 150 67 S230 26 280 40 S350 80 400 60"/>
+      </g>
+    </symbol>
+    <symbol id="i-nav" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<header class="ah">
+  <div class="ah-top">
+    <div class="ttl"><h1 id="title">محطات المهمة</h1><button class="who" id="who"></button></div>
+    <button class="round" id="refresh" aria-label="تحديث"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="round" id="avatar" aria-label="الاسم"></button>
   </div>
-  <div class="sub" id="status"><span class="dot"></span><span id="statusText">جارِ تحديد موقعك…</span></div>
-  <div class="sub" id="counts"></div>
-  <div class="progress"><span id="bar" style="width:0"></span></div>
+  <div class="loc" id="loc"><i></i><span id="locText">جارِ تحديد موقعك…</span></div>
+
+  <!-- list view: what's around me -->
+  <div class="near" id="near">
+    <div class="big"><b id="nearCount">–</b><span id="nearLabel">محطات حولك</span></div>
+    <div class="sub" id="nearSub"></div>
+    <div class="chips" id="radius"><button data-r="1000">1 كم</button><button data-r="2000">2 كم</button><button data-r="5000">5 كم</button><button data-r="0">الكل</button></div>
+  </div>
+  <!-- my tasks view: progress -->
+  <div class="prog" id="prog" hidden>
+    <svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="4"/>
+      <circle id="ringArc" cx="18" cy="18" r="15" fill="none" stroke="#00FF86" stroke-width="4" stroke-linecap="round" stroke-dasharray="0 94.25" transform="rotate(-90 18 18)"/>
+      <text id="ringTxt" x="18" y="21" text-anchor="middle" font-size="8.5" font-weight="600" fill="#fff"></text></svg>
+    <div><b id="progBig"></b><span id="progSub"></span></div>
+  </div>
+  <svg class="wave" viewBox="0 0 400 80" preserveAspectRatio="none" aria-hidden="true"><use href="#wave"/></svg>
 </header>
-<div id="map"></div>
+
 <main>
-  <section class="panel" id="admin" hidden>
-    <h2>إضافة محطات — <span id="supName"></span></h2>
-    <textarea id="nums" inputmode="numeric" placeholder="اكتب رقم محطة أو أكثر، مثال: 15442 554 4468"></textarea>
-    <div class="row">
-      <button class="btn primary" id="addBtn">إضافة</button>
-      <label style="display:flex;gap:6px;align-items:center;font-size:14px;font-weight:600;color:var(--danger)"><input type="checkbox" id="urgent" style="width:18px;height:18px"> عاجلة</label>
-      <button class="btn ghost" id="logout">خروج من وضع المشرف</button>
-    </div>
-    <div class="alert" id="missingAlert" role="alert" hidden>
-      <b>⚠ محطات غير موجودة في ملف المحطات — تأكد من الرقم</b>
-      لم تُضف للقائمة. صحّح الرقم ثم اضغط «إضافة» مرة أخرى.
-      <div class="chips" id="missingChips"></div>
-    </div>
-    <div class="msg" id="addMsg"></div>
-    <h2 style="margin-top:16px">المهام الخاصة</h2>
-    <div class="msg">حدّد محطات قريبة من بعض على الخريطة، وأرسل رابطها لمشغل — لا يرى إلا هذه المحطات.</div>
-    <div class="row"><button class="btn amber" id="selStart">＋ إنشاء مهمة خاصة</button></div>
-    <ul class="groups" id="groups"></ul>
+  <div class="mapwrap" id="mapwrap"><div id="map"></div><button class="mapbtn" id="mapBtn">الخريطة كاملة</button></div>
+
+  <!-- ===== المحطات ===== -->
+  <section class="view" id="v-list">
+    <button class="urgentbar" id="urgentbar" hidden></button>
+    <div id="list" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div class="empty" id="listEmpty" hidden></div>
+    <details class="done-wrap" id="doneWrap" hidden><summary id="doneSum"></summary><div class="stack" id="doneList"></div></details>
+    <div class="foot">المسافات تقريبية. «تمت المعالجة» يتفعّل ضمن ٣٠ م من المحطة.<br><a href="#" id="adminLink">دخول المشرف</a></div>
   </section>
-  <div class="sortbar" id="sortbar" hidden>ترتيب:
-    <div class="seg" id="sortSeg"><button data-s="near">الأقرب</button><button data-s="recent">الأحدث إضافة</button></div>
-  </div>
-  <ol id="list"></ol>
-  <div class="empty" id="empty" hidden>لا توجد محطات حالياً.</div>
-  <details id="doneWrap" hidden><summary id="doneSum"></summary><ol id="doneList"></ol></details>
-  <p class="note">المسافات تقريبية (خط مستقيم). «تمت المعالجة» يتفعّل عندما تكون ضمن ٣٠ م من المحطة.<br>
-    <a href="#" id="adminLink" style="color:inherit">دخول المشرف</a></p>
+
+  <!-- ===== مهامي ===== -->
+  <section class="view" id="v-mine" hidden>
+    <div id="mineList"></div>
+    <details class="done-wrap" id="mineDoneWrap" hidden><summary id="mineDoneSum"></summary><div class="stack" id="mineDone"></div></details>
+    <div class="empty" id="mineEmpty" hidden>لم تحجز أي محطة بعد.<br>اضغط «أنا في الطريق» على محطة من القائمة لتظهر هنا.</div>
+  </section>
+
+  <!-- ===== المشرف ===== -->
+  <section class="view" id="v-admin" hidden>
+    <div class="card">
+      <h2>إضافة محطات</h2>
+      <div class="field" id="field"><input id="numIn" inputmode="numeric" autocomplete="off" placeholder="اكتب أرقام المحطات…" aria-label="أرقام المحطات"></div>
+      <div class="hint">افصل بين الأرقام بمسافة أو فاصلة، أو الصق قائمة كاملة.</div>
+      <div class="acts"><button class="btn pri" id="addBtn">إضافة</button><button class="btn sec toggle" id="urgentBtn" aria-pressed="false">⚠ عاجلة</button></div>
+      <div class="alert" id="missingAlert" role="alert" hidden><b>⚠ أرقام غير موجودة في ملف المحطات — تأكد من الرقم</b><span id="missingList"></span></div>
+      <div class="okmsg" id="addMsg"></div>
+    </div>
+    <div class="seg" id="adminSeg"><button data-m="recent">الأحدث إضافة</button><button data-m="near">الأقرب</button><button data-m="group">مهمة خاصة</button></div>
+    <div class="hint" id="adminHint"></div>
+    <div id="adminRows" style="display:flex;flex-direction:column;gap:8px"></div>
+    <details class="done-wrap" id="adminDoneWrap" hidden><summary id="adminDoneSum"></summary><div class="stack" id="adminDone" style="gap:8px"></div></details>
+    <div id="groupsWrap" hidden>
+      <div class="sect">المهام الخاصة السابقة</div>
+      <div class="groups" id="groups"></div>
+    </div>
+    <div class="acts" style="margin-top:6px"><a class="btn sec" style="flex:1" id="logout" href="#">خروج من وضع المشرف</a></div>
+  </section>
 </main>
 
+<div class="selbar" id="selbar" hidden>
+  <div class="top"><b id="selCount"></b><button class="btn sec sm" id="selCancel">إلغاء</button></div>
+  <div class="top"><input id="selName" maxlength="60" placeholder="اسم المهمة (اختياري)"><button class="btn pri" id="selCreate">إنشاء الرابط</button></div>
+</div>
+
+<nav class="nav" id="nav">
+  <button data-v="list" class="on"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>المحطات</button>
+  <button data-v="mine"><em id="mineBadge" hidden></em><svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 12.5l4.2 4L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>مهامي</button>
+  <button data-v="admin" id="navAdmin" hidden><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>المشرف</button>
+</nav>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true"></div>
+
 <div class="modal" id="nameModal" hidden><div class="box">
-  <h3>اسمك</h3><p>يظهر للفريق عند الحجز أو إنهاء محطة.</p>
+  <h3>اسمك</h3><p>يظهر للفريق عند حجز محطة أو إنهائها.</p>
   <input id="nameInput" autocomplete="name" placeholder="مثال: أحمد العتيبي">
-  <div class="row"><button class="btn primary grow" id="nameSave">حفظ</button></div>
-</div></div>
-<div class="modal" id="confirmModal" hidden><div class="box">
-  <h3 id="cTitle"></h3><p>إذا تأكدت أن المشغل أنجز المحطة ونسي يحددها في الموقع. تُسجَّل باسمه مع «بتأكيد المشرف».</p>
-  <input id="cTech" list="techList" autocomplete="off" placeholder="اسم المشغل الذي أنجزها">
-  <datalist id="techList"></datalist>
-  <input id="cNote" autocomplete="off" placeholder="ملاحظة (اختياري) — مثال: تم التأكد بالاتصال" style="margin-top:8px;font-size:15px">
-  <div class="row"><button class="btn primary grow" id="cOk">تأكيد الإنجاز</button><button class="btn ghost" id="cCancel">إلغاء</button></div>
+  <div class="acts"><button class="btn pri" id="nameSave">حفظ</button></div>
 </div></div>
 <div class="modal" id="pinModal" hidden><div class="box">
   <h3>دخول المشرف</h3><p>أدخل رمز المشرف.</p>
   <input id="pinInput" type="password" inputmode="numeric" autocomplete="off">
-  <div class="row"><button class="btn primary grow" id="pinSave">دخول</button><button class="btn ghost" id="pinCancel">إلغاء</button></div>
+  <div class="acts"><button class="btn pri" id="pinSave">دخول</button><button class="btn sec" id="pinCancel">إلغاء</button></div>
 </div></div>
-<div class="selbar" id="selbar" hidden>
-  <div class="selcount" id="selCount"></div>
-  <div class="row">
-    <input id="selName" maxlength="60" placeholder="اسم المهمة (اختياري)">
-    <button class="btn primary" id="selCreate">إنشاء الرابط</button>
-    <button class="btn ghost" id="selCancel">إلغاء</button>
-  </div>
-</div>
+<div class="modal" id="confirmModal" hidden><div class="box">
+  <h3 id="cTitle"></h3><p>إذا تأكدت أن المشغل أنجز المحطة ونسي يحددها في الموقع. تُسجَّل باسمه مع «بتأكيد المشرف».</p>
+  <input id="cTech" list="techList" autocomplete="off" placeholder="اسم المشغل الذي أنجزها"><datalist id="techList"></datalist>
+  <input id="cNote" autocomplete="off" placeholder="ملاحظة (اختياري)" style="font-size:15px">
+  <div class="acts"><button class="btn go" id="cOk">تأكيد الإنجاز</button><button class="btn sec" id="cCancel">إلغاء</button></div>
+</div></div>
 <div class="modal" id="linkModal" hidden><div class="box">
   <h3 id="linkTitle">رابط المهمة جاهز</h3><p>أرسله للمشغل — يفتح عنده المحطات المحددة فقط.</p>
   <div class="linkbox" id="linkText"></div>
-  <div class="row"><button class="btn primary grow" id="linkCopy">نسخ الرابط</button>
-    <a class="btn amber" id="linkWa" target="_blank" rel="noopener">واتساب</a>
-    <button class="btn ghost" id="linkClose">إغلاق</button></div>
+  <div class="acts"><button class="btn pri" id="linkCopy">نسخ الرابط</button><a class="btn sec" id="linkWa" target="_blank" rel="noopener">واتساب</a></div>
+  <button class="btn sec" id="linkClose">إغلاق</button>
 </div></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -222,8 +325,11 @@ let name = store.get('tech_name'), pin = store.get('admin_pin');
 let items = [], me = null, busy = false;
 // a special-task link (#g=<id>) shows only that task's stations
 const G = new URLSearchParams(location.hash.slice(1)).get('g') || '';
+let view = 'list', radius = +(store.get('radius') || 0), adminMode = store.get('sort_mode') === 'near' ? 'near' : 'recent';
 let selecting = false; const sel = new Set();
+let sheetId = null, sheetAdmin = false; const arrivedShown = new Set();
 
+// ---------- helpers ----------
 function meters(a, b){
   const R = 6371000, r = Math.PI / 180;
   const dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
@@ -231,24 +337,34 @@ function meters(a, b){
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 const fmt = m => m < 1000 ? Math.round(m) + ' م' : (m/1000).toFixed(m < 10000 ? 1 : 0) + ' كم';
+// rough city drive time: straight line × 1.3 road factor at ~27 km/h
+const mins = m => Math.max(1, Math.round(m * 1.3 / 1000 * 2.2));
 const time = iso => iso ? new Date(iso).toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit' }) : '';
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-// urgent stations nobody has taken yet (or that I took) jump to the top of everyone's list
-const isTop = s => s.priority === 'high' && s.status !== 'done' && (s.status === 'open' || s.claimed_by === name);
 const when = iso => {
   if (!iso) return '';
   const d = new Date(iso), today = new Date().toDateString() === d.toDateString();
   return today ? 'اليوم ' + time(iso) : d.toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' }) + ' ' + time(iso);
 };
-// supervisor can list stations newest-added first, to find and remove one just added
-let sortMode = store.get('sort_mode') || 'near';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const navUrl = s => `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving`;
+const stationsWord = n => n >= 3 && n <= 10 ? 'محطات' : 'محطة';
+// count with the right Arabic form: محطة واحدة · محطتان · 3 محطات · 11 محطة
+const stations = n => n === 1 ? 'محطة واحدة' : n === 2 ? 'محطتان' : `${n} ${stationsWord(n)}`;
+const km = r => (r / 1000) + ' كم';
+const mine = n => !!n && n === name;
+const isUrgent = s => s.priority === 'high' && s.status !== 'done';
+// urgent stations nobody has taken yet (or that I took) jump to the top of everyone's list
+const isTop = s => isUrgent(s) && (s.status === 'open' || mine(s.claimed_by));
+const dist = s => me ? meters(me, s) : null;
+const canDone = s => me && s.status !== 'done' && meters(me, s) <= RADIUS_M + Math.min(me.acc || 0, GPS_TOLERANCE_M);
+const navIcon = s => `<a class="btn ico" href="${navUrl(s)}" target="_blank" rel="noopener" aria-label="ملاحة"><svg width="20" height="20"><use href="#i-nav"/></svg></a>`;
 
 function toast(text){
   const t = $('toast'); t.textContent = text; t.classList.add('show');
   clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
+// ---------- api ----------
 async function api(body){
   if (!API) throw new Error('لم يتم ربط الصفحة بالخادم بعد');
   const res = body
@@ -256,7 +372,7 @@ async function api(body){
     : await fetch(API + (API.includes('?') ? '&' : '?') + 't=' + Date.now() + (G ? '&g=' + encodeURIComponent(G) : ''));
   const data = await res.json();
   if (data.error) throw new Error(data.error);
-  if (G && data.group) { const t = data.group.name || 'مهمة خاصة'; document.querySelector('h1').textContent = t; document.title = t; }
+  if (G && data.group) { const t = data.group.name || 'مهمة خاصة'; $('title').textContent = t; document.title = t; }
   if (data.items) { items = data.items.map(i => ({ ...i, lat: +i.lat, lng: +i.lng })); render(); }
   return data;
 }
@@ -267,8 +383,8 @@ async function act(body, okText){
   finally { busy = false; document.body.style.cursor = ''; }
 }
 async function load(){
-  try { await api(); setCounts(); }
-  catch (e) { $('counts').textContent = 'تعذّر التحميل: ' + e.message; }
+  try { await api(); }
+  catch (e) { $('nearSub').textContent = 'تعذّر التحميل: ' + e.message; }
 }
 
 // ---------- map ----------
@@ -277,113 +393,248 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19,
 const layer = L.layerGroup().addTo(map), markers = new Map();
 map.on('zoomend', () => $('map').classList.toggle('labels', map.getZoom() >= 14));
 let meMarker = null, fitted = false;
+function setMapBig(on){
+  $('mapwrap').classList.toggle('big', on);
+  $('mapBtn').textContent = on ? 'تصغير الخريطة' : 'الخريطة كاملة';
+  setTimeout(() => map.invalidateSize(), 260);
+}
+$('mapBtn').onclick = () => setMapBig(!$('mapwrap').classList.contains('big'));
 
+function mapItems(){
+  if (view === 'mine') return items.filter(s => mine(s.claimed_by) || mine(s.done_by));
+  return items;
+}
 function drawMap(){
   layer.clearLayers(); markers.clear();
-  for (const s of items) {
+  for (const s of mapItems()) {
+    const cls = `pin ${s.status}${isUrgent(s) ? ' urgent' : ''}${sel.has(s.id) ? ' sel' : ''}`;
     const m = L.marker([s.lat, s.lng], {
-      icon: L.divIcon({ className: '', html: `<span class="pin ${s.status}${s.priority === 'high' && s.status !== 'done' ? ' urgent' : ''}${sel.has(s.id) ? ' sel' : ''}">${s.station}</span>`, iconSize: [0, 0] }),
-      zIndexOffset: s.status === 'done' ? -100 : sel.has(s.id) ? 800 : s.priority === 'high' ? 500 : 0
+      icon: L.divIcon({ className: '', html: `<span class="${cls}">${s.station}</span>`, iconSize: [0, 0] }),
+      zIndexOffset: s.status === 'done' ? -100 : sel.has(s.id) ? 800 : isUrgent(s) ? 500 : 0
     });
-    if (selecting) m.on('click', () => toggleSel(s));
-    else m.bindPopup(`<b dir="ltr">S${s.station}</b><br><a href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`);
+    m.on('click', () => selecting ? toggleSel(s) : openSheet(s.id, view === 'admin'));
     layer.addLayer(m); markers.set(s.id, m);
   }
-  if (!fitted && items.length) {
-    fitted = true;
-    const open = items.filter(s => s.status !== 'done');
-    const pts = (me ? open.slice().sort((a, b) => meters(me, a) - meters(me, b)).slice(0, 3) : open).map(s => [s.lat, s.lng]);
-    if (me) pts.push([me.lat, me.lng]);
-    if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(me ? 0.25 : 0.1));
-  }
+  if (!fitted && items.length) { fitted = true; fitView(); }
+}
+function fitView(){
+  const open = mapItems().filter(s => s.status !== 'done');
+  let pts = open;
+  if (view === 'list' && me) pts = open.slice().sort((a, b) => meters(me, a) - meters(me, b)).slice(0, 3);
+  pts = pts.map(s => [s.lat, s.lng]);
+  if (me) pts.push([me.lat, me.lng]);
+  if (pts.length === 1) map.setView(pts[0], 15);
+  else if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.25));
 }
 
-// ---------- list ----------
-function card(s, i, first){
-  const d = me ? meters(me, s) : null, mine = n => n && n === name;
-  const canDone = d != null && d <= RADIUS_M + Math.min(me.acc || 0, GPS_TOLERANCE_M);
-  let tag = '', btns = `<a class="btn primary" href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`;
-  if (s.status === 'open') {
-    btns += `<button class="btn amber" data-a="claim" data-id="${s.id}">أنا في الطريق</button>`;
-  } else if (s.status === 'claimed') {
-    tag = `<span class="tag amber">${mine(s.claimed_by) ? 'أنت في الطريق' : 'في الطريق: ' + esc(s.claimed_by)} · ${time(s.claimed_at)}</span>`;
-    if (mine(s.claimed_by) || pin) btns += `<button class="btn ghost" data-a="unclaim" data-id="${s.id}">إلغاء الحجز</button>`;
+// ---------- station card (operator) ----------
+function card(s, opts = {}){
+  const d = dist(s), urgent = isUrgent(s), other = s.status === 'claimed' && !mine(s.claimed_by);
+  const pills = [];
+  if (urgent) pills.push('<span class="pill u">عاجلة</span>');
+  if (s.status === 'claimed') pills.push(`<span class="pill c">${mine(s.claimed_by) ? 'أنت في الطريق' : esc(s.claimed_by) + ' في الطريق'}</span>`);
+  if (s.status === 'done') pills.push(`<span class="pill d">تمت · ${esc(s.done_by)} · ${time(s.done_at)}${s.confirmed_by ? ' · بتأكيد المشرف' : ''}</span>`);
+  if (opts.nearest) pills.push('<span class="pill m">الأقرب</span>');
+  let acts = '';
+  if (s.status === 'done') {
+    acts = '';
+  } else if (canDone(s)) {
+    acts = `<button class="btn go" data-a="done" data-id="${s.id}">✓ تمت المعالجة</button>`;
+  } else if (s.status === 'open') {
+    acts = `<button class="btn pri" data-a="claim" data-id="${s.id}">أنا في الطريق</button>${navIcon(s)}`;
+  } else if (mine(s.claimed_by)) {
+    acts = `<a class="btn pri" href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a><button class="btn sec" data-a="unclaim" data-id="${s.id}">إلغاء</button>`;
   }
-  if (s.status !== 'done') {
-    const why = d == null ? 'حدد موقعك' : canDone ? '' : `تبعد ${fmt(d)}`;
-    btns += `<button class="btn primary grow" data-a="done" data-id="${s.id}" ${canDone ? '' : 'disabled'}>✓ تمت المعالجة${why ? ' — ' + why : ''}</button>`;
-  } else {
-    tag = `<span class="tag ok">✓ ${esc(s.done_by)} · ${time(s.done_at)}${s.confirmed_by ? ' · بتأكيد المشرف' : ''}</span>`;
-    btns = (mine(s.done_by) || pin) ? `<button class="btn ghost" data-a="undo" data-id="${s.id}">تراجع</button>` : '';
+  const cls = `st ${s.status}${urgent ? ' urgent' : ''}${other ? ' muted' : ''}`;
+  return `<div class="${cls}">
+    <div class="row"><span class="num" data-open="${s.id}">S${s.station}</span>${pills.join('')}
+      ${d != null && s.status !== 'done' ? `<div class="dist"><b>${fmt(d)}</b>${other ? '' : `<span>تقريباً ${mins(d)} د</span>`}</div>` : ''}</div>
+    ${other && !acts ? '' : acts ? `<div class="acts">${acts}</div>` : ''}</div>`;
+}
+
+// ---------- views ----------
+function renderList(){
+  const open = items.filter(s => s.status !== 'done');
+  const inR = s => !radius || !me || meters(me, s) <= radius;
+  const shown = open.filter(inR).sort((a, b) => (isTop(b) - isTop(a)) || (me ? meters(me, a) - meters(me, b) : 0));
+  const firstFree = me ? shown.findIndex(s => !isTop(s) && s.status === 'open') : -1;
+  $('list').innerHTML = shown.map((s, i) => card(s, { nearest: i === firstFree })).join('');
+  $('listEmpty').hidden = shown.length > 0;
+  $('listEmpty').innerHTML = !items.length ? 'لا توجد محطات حالياً.'
+    : !open.length ? 'تمت معالجة جميع المحطات ✓'
+    : `لا توجد محطات ضمن ${km(radius)}.<br>اختر مسافة أكبر من الأعلى.`;
+  const urgentFree = open.filter(s => isUrgent(s) && s.status === 'open').length;
+  $('urgentbar').hidden = !urgentFree;
+  const urgentHidden = open.some(s => isUrgent(s) && s.status === 'open' && !inR(s));
+  $('urgentbar').textContent = `⚠ عاجلة لم يتوجه لها أحد: ${stations(urgentFree)}${urgentHidden ? ' — اعرضها' : ''}`;
+  const done = items.filter(s => s.status === 'done').sort((a, b) => String(b.done_at).localeCompare(String(a.done_at)));
+  $('doneWrap').hidden = !done.length;
+  $('doneSum').textContent = `المنجزة (${done.length}) ▾`;
+  $('doneList').innerHTML = done.map(s => card(s)).join('');
+
+  // "around you" summary — available = not done and not taken by someone else
+  const avail = open.filter(s => s.status === 'open' || mine(s.claimed_by));
+  const near = avail.filter(inR);
+  $('nearCount').textContent = near.length;
+  $('nearLabel').textContent = me && radius ? `${stationsWord(near.length)} حولك ضمن ${km(radius)}` : `${stationsWord(near.length)} متاحة`;
+  const nearest = me ? near.slice().sort((a, b) => meters(me, a) - meters(me, b))[0] : null;
+  const claimed = open.filter(s => s.status === 'claimed').length;
+  $('nearSub').textContent = [nearest ? `أقربها ${fmt(meters(me, nearest))}` : '', claimed ? `${claimed} في الطريق` : '',
+    `${done.length} من ${items.length} تمت`].filter(Boolean).join(' · ');
+  for (const b of $('radius').children) { b.classList.toggle('on', +b.dataset.r === radius); b.disabled = !me && +b.dataset.r > 0; }
+}
+
+// nearest-neighbour route through my remaining stations, starting where I am
+function routeOrder(list){
+  const rest = list.slice(), out = []; let at = me;
+  while (rest.length) {
+    let k = 0;
+    if (at) rest.forEach((s, i) => { if (meters(at, s) < meters(at, rest[k])) k = i; });
+    const [s] = rest.splice(k, 1); out.push(s); at = s;
   }
-  const urgent = s.priority === 'high' && s.status !== 'done';
-  if (urgent) tag = `<span class="tag red">⚠ عاجلة</span> ` + tag;
-  if (pin && s.status !== 'done') btns += `<button class="btn ${urgent ? 'ghost' : 'danger'}" data-a="priority" data-id="${s.id}">${urgent ? 'إلغاء العجلة' : '⚠ اجعلها عاجلة'}</button>`;
-  if (pin && s.status !== 'done') btns += `<button class="btn ghost" data-a="confirm" data-id="${s.id}">✓ تأكيد الإنجاز</button>`;
-  if (selecting && s.status !== 'done') btns = `<button class="btn ${sel.has(s.id) ? 'primary' : 'ghost'} grow" data-a="sel" data-id="${s.id}">${sel.has(s.id) ? '✓ محددة للمهمة' : 'تحديد للمهمة'}</button>`;
-  if (pin) btns += `<button class="btn danger" data-a="remove" data-id="${s.id}">حذف</button>`;
-  const meta = d == null ? '' : (first && !isTop(s) ? 'الأقرب لك · ' : '') + fmt(d);
-  return `<li class="${s.status}${sel.has(s.id) ? ' sel' : ''}${urgent ? ' urgent' : ''}${isTop(s) ? ' top' : ''}${first && !isTop(s) ? ' first' : ''}">
-    <div class="head"><span class="rank">${s.status === 'done' ? '✓' : i + 1}</span>
-      <div class="info"><div class="num" data-id="${s.id}">S${s.station}</div>
-        ${meta ? `<div class="meta">${meta}</div>` : ''}${pin && s.added_at ? `<div class="added">أُضيفت ${when(s.added_at)}</div>` : ''}${tag}</div></div>
-    ${btns ? `<div class="actions">${btns}</div>` : ''}</li>`;
+  return out;
+}
+function renderMine(){
+  const doneMine = items.filter(s => s.status === 'done' && mine(s.done_by)).sort((a, b) => String(a.done_at).localeCompare(String(b.done_at)));
+  const todo = routeOrder(items.filter(s => s.status === 'claimed' && mine(s.claimed_by)));
+  const total = doneMine.length + todo.length;
+  $('mineBadge').hidden = !todo.length; $('mineBadge').textContent = todo.length;
+  $('mineEmpty').hidden = total > 0;
+  $('mineList').innerHTML = todo.map((s, i) => `<div class="step"><div class="rail"><span class="dot">${i + 1}</span><span class="line"></span></div>${card(s)}</div>`).join('');
+  $('mineDoneWrap').hidden = !doneMine.length;
+  $('mineDoneSum').textContent = `أنجزتها (${doneMine.length}) ▾`;
+  $('mineDone').innerHTML = doneMine.slice().reverse().map(s => card(s)).join('');
+  // progress ring + what's left
+  const frac = total ? doneMine.length / total : 0;
+  $('ringArc').setAttribute('stroke-dasharray', `${(frac * 94.25).toFixed(2)} 94.25`);
+  $('ringTxt').textContent = `${doneMine.length}/${total}`;
+  let km = 0, at = me;
+  for (const s of todo) { if (at) km += meters(at, s); at = s; }
+  $('progBig').textContent = total ? (todo.length ? `باقي لك ${stations(todo.length)}` : 'أنجزت كل محطاتك ✓') : 'لا توجد مهام';
+  $('progSub').textContent = todo.length && me ? `تقريباً ${fmt(km * 1.3)} · ${mins(km)} دقيقة قيادة` : total ? `منجزة: ${stations(doneMine.length)}` : '';
+}
+
+function renderAdmin(){
+  $('navAdmin').hidden = !pin;
+  if (!pin) return;
+  for (const b of $('adminSeg').children) b.classList.toggle('on', b.dataset.m === (selecting ? 'group' : adminMode));
+  const open = items.filter(s => s.status !== 'done');
+  const order = adminMode === 'near' && me
+    ? (a, b) => meters(me, a) - meters(me, b)
+    : (a, b) => String(b.added_at).localeCompare(String(a.added_at));
+  open.sort(order);
+  $('adminHint').textContent = selecting ? 'اضغط على المحطات في الخريطة أو القائمة لتحديدها، ثم «إنشاء الرابط».'
+    : open.length ? 'اضغط على أي محطة لخياراتها: عاجلة، تأكيد الإنجاز، إلغاء الحجز، حذف.' : 'لا توجد محطات متبقية.';
+  const row = s => {
+    const st = s.status === 'done' ? `<span class="pill d">تمت</span>` : s.status === 'claimed' ? `<span class="pill c">${esc(s.claimed_by)}</span>` : '';
+    return `<button class="mini${sel.has(s.id) ? ' sel' : ''}" data-row="${s.id}">
+      ${selecting ? `<span class="chk${sel.has(s.id) ? ' on' : ''}">${sel.has(s.id) ? '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.2L9.5 3.6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>' : ''}</span>` : ''}
+      <span class="meta"><span class="num">S${s.station}</span><small>أُضيفت ${when(s.added_at)}${me && s.status !== 'done' ? ' · ' + fmt(meters(me, s)) : ''}</small></span>
+      <span class="end">${isUrgent(s) ? '<span class="pill u">عاجلة</span>' : ''}${st}${selecting ? '' : '<span class="more">⋯</span>'}</span></button>`;
+  };
+  $('adminRows').innerHTML = open.map(row).join('');
+  const done = items.filter(s => s.status === 'done').sort((a, b) => String(b.done_at).localeCompare(String(a.done_at)));
+  $('adminDoneWrap').hidden = !done.length || selecting;
+  $('adminDoneSum').textContent = `المنجزة (${done.length}) ▾`;
+  $('adminDone').innerHTML = done.map(row).join('');
+  $('groupsWrap').hidden = !selecting && adminMode !== 'group';
 }
 
 function render(){
-  const byDist = (a, b) => me ? meters(me, a) - meters(me, b) : 0;
-  const recent = pin && sortMode === 'recent';
-  const open = items.filter(s => s.status !== 'done').sort(recent
-    ? (a, b) => String(b.added_at).localeCompare(String(a.added_at))
-    : (a, b) => (isTop(b) - isTop(a)) || byDist(a, b));
-  $('sortbar').hidden = !pin;
-  for (const b of $('sortSeg').children) b.classList.toggle('on', b.dataset.s === (recent ? 'recent' : 'near'));
-  const done = items.filter(s => s.status === 'done').sort((a, b) => String(b.done_at).localeCompare(String(a.done_at)));
-  const firstNear = recent ? -1 : open.findIndex(s => !isTop(s));
-  $('list').innerHTML = open.map((s, i) => card(s, i, i === firstNear && !!me)).join('');
-  $('doneList').innerHTML = done.map((s, i) => card(s, i, false)).join('');
-  $('empty').hidden = open.length > 0;
-  $('empty').textContent = items.length ? 'تمت معالجة جميع المحطات 👍' : 'لا توجد محطات حالياً.';
-  $('doneWrap').hidden = !done.length;
-  $('doneSum').textContent = `المحطات المنجزة (${done.length})`;
-  setCounts(); drawMap();
-}
-function setCounts(){
-  const done = items.filter(s => s.status === 'done').length, claimed = items.filter(s => s.status === 'claimed').length;
-  const urgent = items.filter(s => s.priority === 'high' && s.status !== 'done').length;
-  $('counts').textContent = items.length ? `${done} من ${items.length} تمت · ${claimed} في الطريق` + (urgent ? ` · ⚠ ${urgent} عاجلة متبقية` : '') : '';
-  $('bar').style.width = items.length ? (done / items.length * 100) + '%' : 0;
+  renderList(); renderMine(); renderAdmin(); drawMap();
+  if (sheetId) renderSheet();
 }
 
-document.addEventListener('click', async e => {
-  const num = e.target.closest('.num');
-  if (num) {
-    const s = items.find(x => x.id === num.dataset.id); if (!s) return;
-    map.setView([s.lat, s.lng], 17); markers.get(s.id)?.openPopup(); window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
+function setView(v){
+  if (v === 'admin' && !pin) return;
+  if (selecting && v !== 'admin') setSelecting(false);
+  view = v;
+  for (const b of $('nav').children) b.classList.toggle('on', b.dataset.v === v);
+  $('v-list').hidden = v !== 'list'; $('v-mine').hidden = v !== 'mine'; $('v-admin').hidden = v !== 'admin';
+  $('near').hidden = v !== 'list'; $('prog').hidden = v !== 'mine';
+  window.scrollTo({ top: 0 });
+  render(); fitView();
+}
+$('nav').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) setView(b.dataset.v); });
+$('urgentbar').onclick = () => { if (radius) { radius = 0; store.set('radius', '0'); render(); } };
+$('radius').addEventListener('click', e => {
+  const b = e.target.closest('button[data-r]'); if (!b || b.disabled) return;
+  radius = +b.dataset.r; store.set('radius', String(radius)); render();
+});
+
+// ---------- bottom sheet: station detail / at the station ----------
+function openSheet(id, admin){ sheetId = id; sheetAdmin = !!admin && !!pin; renderSheet(); }
+function closeSheet(){ sheetId = null; $('sheet').hidden = true; $('scrim').hidden = true; }
+$('scrim').onclick = closeSheet;
+function renderSheet(){
+  const s = items.find(x => x.id === sheetId);
+  if (!s) return closeSheet();
+  const d = dist(s), urgent = isUrgent(s);
+  const pills = [urgent ? '<span class="pill u">عاجلة</span>' : '',
+    s.status === 'claimed' ? `<span class="pill c">${mine(s.claimed_by) ? 'أنت في الطريق' : esc(s.claimed_by) + ' في الطريق'}</span>` : '',
+    s.status === 'done' ? `<span class="pill d">تمت · ${esc(s.done_by)} · ${time(s.done_at)}${s.confirmed_by ? ' · بتأكيد المشرف' : ''}</span>` : ''].join('');
+  let body = '';
+  if (s.status !== 'done') {
+    body += canDone(s)
+      ? `<div class="here"><i></i>أنت عند المحطة · ${fmt(d)}</div><button class="btn go huge" data-a="done" data-id="${s.id}">✓ تمت المعالجة</button>`
+      : `<div class="far">${d == null ? 'حدد موقعك لمعرفة المسافة' : `تبعد ${fmt(d)} · تقريباً ${mins(d)} د`}</div>`;
+    const g = [`<a class="btn ${canDone(s) || s.status === 'open' ? 'sec' : 'pri'}" href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`];
+    if (s.status === 'open') g.push(`<button class="btn ${canDone(s) ? 'sec' : 'pri'}" data-a="claim" data-id="${s.id}">أنا في الطريق</button>`);
+    if (s.status === 'claimed' && (mine(s.claimed_by) || sheetAdmin)) g.push(`<button class="btn sec" data-a="unclaim" data-id="${s.id}">إلغاء الحجز</button>`);
+    body += `<div class="grid">${g.join('')}</div>`;
+    if (!canDone(s)) body += `<div class="note">«تمت المعالجة» يظهر عند وصولك للمحطة (ضمن ٣٠ م)</div>`;
+  } else if (mine(s.done_by) || sheetAdmin) {
+    body += `<button class="btn sec" data-a="undo" data-id="${s.id}">تراجع عن الإنجاز</button>`;
   }
+  if (sheetAdmin) {
+    const a = [];
+    if (s.status !== 'done') {
+      a.push(`<button class="btn ${urgent ? 'sec' : 'warn'}" data-a="priority" data-id="${s.id}">${urgent ? 'إلغاء العجلة' : '⚠ اجعلها عاجلة'}</button>`);
+      a.push(`<button class="btn sec" data-a="confirm" data-id="${s.id}">✓ تأكيد الإنجاز</button>`);
+    }
+    a.push(`<button class="btn warn" data-a="remove" data-id="${s.id}">حذف من القائمة</button>`);
+    body += `<div class="sect">خيارات المشرف</div><div class="grid">${a.join('')}</div>`;
+    if (s.added_at) body += `<div class="note">أُضيفت ${when(s.added_at)}</div>`;
+  }
+  $('sheet').innerHTML = `<div class="grab"></div><div class="row"><span class="num" style="font-size:26px">S${s.station}</span>${pills}</div>${body}`;
+  $('sheet').hidden = false; $('scrim').hidden = false;
+}
+// arriving at one of my stations opens the sheet once, with the big «تمت المعالجة» button
+function checkArrival(){
+  if (sheetId || selecting) return;
+  const s = items.find(x => x.status === 'claimed' && mine(x.claimed_by) && canDone(x) && !arrivedShown.has(x.id));
+  if (s) { arrivedShown.add(s.id); openSheet(s.id, false); }
+}
+
+// ---------- actions ----------
+document.addEventListener('click', async e => {
+  const o = e.target.closest('[data-open]');
+  if (o) return openSheet(o.dataset.open, false);
+  const r = e.target.closest('[data-row]');
+  if (r) { const s = items.find(x => x.id === r.dataset.row); return selecting ? toggleSel(s) : openSheet(s.id, true); }
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const id = b.dataset.id, a = b.dataset.a, s = items.find(x => x.id === id);
-  if (!name && !['remove', 'confirm', 'priority', 'sel'].includes(a)) return askName();
-  if (a === 'sel') return toggleSel(s);
-  if (a === 'confirm') return openConfirm(s);
+  if (!s) return;
+  if (!name && ['claim', 'unclaim', 'done', 'undo'].includes(a)) return askName();
+  if (a === 'confirm') { closeSheet(); return openConfirm(s); }
   if (a === 'claim') act({ action: 'claim', id }, 'تمت إضافة المحطة لمهامك');
   if (a === 'unclaim') act({ action: 'unclaim', id }, 'تم إلغاء الحجز');
   if (a === 'done') {
     if (!confirm(`تأكيد: تمت معالجة المحطة S${s.station}؟`)) return;
-    act({ action: 'done', id, lat: me.lat, lng: me.lng, acc: me.acc }, 'تم تسجيل المعالجة ✓');
+    const d = await act({ action: 'done', id, lat: me.lat, lng: me.lng, acc: me.acc }, 'تم تسجيل المعالجة ✓');
+    if (d) closeSheet();
   }
   if (a === 'undo' && confirm(`التراجع عن معالجة S${s.station}؟`)) act({ action: 'undo', id }, 'تم التراجع');
   if (a === 'priority') act({ action: 'priority', id, priority: s.priority === 'high' ? '' : 'high' }, s.priority === 'high' ? 'أُلغيت العجلة' : 'أصبحت عاجلة — تظهر أعلى القائمة للجميع');
-  if (a === 'remove' && confirm(`حذف S${s.station} من القائمة؟`)) act({ action: 'remove', id }, 'تم الحذف');
+  if (a === 'remove' && confirm(`حذف S${s.station} من القائمة؟`)) { const d = await act({ action: 'remove', id }, 'تم الحذف'); if (d) closeSheet(); }
 });
 
-// ---------- supervisor: confirm completion on behalf of a technician ----------
+// ---------- supervisor: confirm completion on behalf of an operator ----------
 let cId = null;
 function openConfirm(s){
   cId = s.id;
-  const techs = [...new Set(items.flatMap(i => [i.claimed_by, i.done_by]).filter(Boolean))].sort();
-  $('techList').innerHTML = techs.map(n => `<option value="${esc(n)}">`).join('');
+  const ops = [...new Set(items.flatMap(i => [i.claimed_by, i.done_by]).filter(Boolean))].sort();
+  $('techList').innerHTML = ops.map(n => `<option value="${esc(n)}">`).join('');
   $('cTitle').textContent = `تأكيد إنجاز S${s.station}`;
   $('cTech').value = s.claimed_by || ''; $('cNote').value = '';
   $('confirmModal').hidden = false; $('cTech').focus();
@@ -396,28 +647,87 @@ $('cOk').onclick = async () => {
   if (d) $('confirmModal').hidden = true;
 };
 
-// ---------- supervisor: special tasks (select stations → shareable link) ----------
-const SEL_HINT = 'اضغط على المحطات في الخريطة أو القائمة لتحديدها';
-function toggleSel(s){
-  if (s.status === 'done') return;
-  sel.has(s.id) ? sel.delete(s.id) : sel.add(s.id);
-  $('selCount').textContent = sel.size ? `محدد: ${sel.size} ${sel.size >= 3 && sel.size <= 10 ? 'محطات' : 'محطة'}` : SEL_HINT;
+// ---------- supervisor: add stations (numbers become tokens; wrong ones stay red) ----------
+let tokens = [];                 // { n, bad }
+const missingAll = new Set();
+function drawTokens(){
+  $('field').querySelectorAll('.tok').forEach(t => t.remove());
+  const inp = $('numIn');
+  tokens.forEach((t, i) => {
+    const el = document.createElement('span');
+    el.className = 'tok' + (t.bad ? ' bad' : '');
+    el.innerHTML = `${esc(t.n)}<button type="button" data-tok="${i}" aria-label="إزالة">×</button>`;
+    $('field').insertBefore(el, inp);
+  });
+  const good = tokens.filter(t => !t.bad).length;
+  $('addBtn').textContent = good ? `إضافة ${stations(good)}` : 'إضافة';
+}
+function commitInput(){
+  const nums = ($('numIn').value.match(/\d+/g) || []);
+  for (const n of nums) if (!tokens.some(t => t.n === n)) tokens.push({ n, bad: false });
+  $('numIn').value = ''; drawTokens();
+}
+$('numIn').addEventListener('input', () => { if (/[\s,،;]/.test($('numIn').value)) commitInput(); });
+$('numIn').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); commitInput(); }
+  if (e.key === 'Backspace' && !$('numIn').value && tokens.length) { tokens.pop(); drawTokens(); }
+});
+$('field').addEventListener('click', e => {
+  const x = e.target.closest('button[data-tok]');
+  if (x) { tokens.splice(+x.dataset.tok, 1); drawTokens(); }
+  $('numIn').focus();
+});
+$('urgentBtn').onclick = () => $('urgentBtn').setAttribute('aria-pressed', $('urgentBtn').getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+$('addBtn').onclick = async () => {
+  commitInput();
+  const send = tokens.filter(t => !t.bad).map(t => t.n);
+  if (!send.length) return toast('اكتب رقم محطة واحدة على الأقل');
+  const urgent = $('urgentBtn').getAttribute('aria-pressed') === 'true';
+  const d = await act({ action: 'add', numbers: send.join(' '), priority: urgent ? 'high' : '' });
+  if (!d) return;
+  const missing = new Set(d.missing.map(String));
+  // added and already-present numbers leave the field; wrong ones stay, marked red
+  tokens = tokens.filter(t => t.bad || missing.has(t.n)).map(t => ({ n: t.n, bad: true }));
+  drawTokens();
+  const parts = [];
+  if (d.added.length) { parts.push(`أُضيفت: ${d.added.join('، ')}`); toast(`تمت إضافة ${stations(d.added.length)}`); $('urgentBtn').setAttribute('aria-pressed', 'false'); }
+  if (d.already.length) parts.push(`موجودة مسبقاً: ${d.already.join('، ')}`);
+  $('addMsg').textContent = parts.join(' · ');
+  // the alert stays until the page is reloaded
+  if (d.missing.length) {
+    d.missing.forEach(n => missingAll.add(String(n)));
+    $('missingList').textContent = [...missingAll].join('، ');
+    $('missingAlert').hidden = false;
+  }
+  if (adminMode === 'group') adminMode = 'recent';
   render();
+};
+
+// ---------- supervisor: list modes + special tasks ----------
+$('adminSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-m]'); if (!b) return;
+  if (b.dataset.m === 'group') { adminMode = 'group'; setSelecting(true); loadGroups(); return; }
+  if (selecting) setSelecting(false);
+  adminMode = b.dataset.m; store.set('sort_mode', adminMode); render();
+});
+function updSelCount(){ $('selCount').textContent = sel.size ? `محدد: ${stations(sel.size)}` : 'حدد المحطات من الخريطة أو القائمة'; }
+function toggleSel(s){
+  if (!s || s.status === 'done') return;
+  sel.has(s.id) ? sel.delete(s.id) : sel.add(s.id);
+  updSelCount(); render();
 }
 function setSelecting(on){
   selecting = on; sel.clear();
-  $('selbar').hidden = !on; $('map').classList.toggle('big', on);
-  $('selName').value = ''; $('selCount').textContent = SEL_HINT;
-  document.body.style.paddingBottom = on ? '120px' : '';
-  setTimeout(() => map.invalidateSize(), 50);
+  $('selbar').hidden = !on; $('selName').value = ''; updSelCount();
+  document.body.style.paddingBottom = on ? 'calc(var(--nav-h) + 150px)' : '';
+  setMapBig(on);
   if (on) {
     const open = items.filter(s => s.status !== 'done');
-    if (open.length) map.fitBounds(L.latLngBounds(open.map(s => [s.lat, s.lng])).pad(0.1));
+    if (open.length) setTimeout(() => map.fitBounds(L.latLngBounds(open.map(s => [s.lat, s.lng])).pad(0.1)), 280);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  } else if (adminMode === 'group') adminMode = store.get('sort_mode') === 'near' ? 'near' : 'recent';
   render();
 }
-$('selStart').onclick = () => setSelecting(true);
 $('selCancel').onclick = () => setSelecting(false);
 const linkFor = id => location.href.split('#')[0] + '#g=' + id;
 $('selCreate').onclick = async () => {
@@ -443,13 +753,13 @@ async function loadGroups(){
   if (!pin) return;
   try { const d = await api({ action: 'group_list', pin, g: G }); groups = d.groups || []; }
   catch { groups = []; }
-  $('groups').innerHTML = groups.length ? groups.map(gr => `<li class="panel" style="margin:0">
-      <span class="gname">${esc(gr.name || 'مهمة خاصة')}</span>
-      <button class="btn ghost" data-g="copy" data-gid="${gr.id}">الرابط</button>
-      <a class="btn ghost" href="${linkFor(gr.id)}">فتح</a>
-      <button class="btn danger" data-g="del" data-gid="${gr.id}">حذف</button>
-      <span class="gmeta">${gr.done} من ${gr.count} تمت · ${esc(gr.created_by || '')} · ${time(gr.created_at)}</span></li>`).join('')
-    : '<li class="msg">لا توجد مهام خاصة بعد.</li>';
+  $('groups').innerHTML = groups.length ? groups.map(gr => `<div class="grp">
+      <b>${esc(gr.name || 'مهمة خاصة')}</b>
+      <button class="btn sec sm" data-g="copy" data-gid="${gr.id}">الرابط</button>
+      <a class="btn sec sm" href="${linkFor(gr.id)}">فتح</a>
+      <button class="btn warn sm" data-g="del" data-gid="${gr.id}">حذف</button>
+      <small>${gr.done} من ${gr.count} تمت · ${esc(gr.created_by || '')} · ${when(gr.created_at)}</small></div>`).join('')
+    : '<div class="hint">لا توجد مهام خاصة بعد.</div>';
 }
 $('groups').addEventListener('click', async e => {
   const b = e.target.closest('button[data-g]'); if (!b) return;
@@ -460,20 +770,19 @@ $('groups').addEventListener('click', async e => {
   }
 });
 
-$('sortSeg').addEventListener('click', e => {
-  const b = e.target.closest('button[data-s]'); if (!b) return;
-  sortMode = b.dataset.s; store.set('sort_mode', sortMode); render();
-});
-
-// ---------- name / admin ----------
+// ---------- name / supervisor sign-in ----------
 function askName(){ $('nameInput').value = name; $('nameModal').hidden = false; $('nameInput').focus(); }
 $('nameSave').onclick = () => {
   const v = $('nameInput').value.trim(); if (!v) return;
   name = v; store.set('tech_name', v); $('nameModal').hidden = true; showWho(); render();
 };
-function showWho(){ $('who').textContent = name ? '👤 ' + name : 'اسمك'; $('admin').hidden = !pin; $('adminLink').hidden = !!pin; $('supName').textContent = store.get('admin_name') || 'المشرف'; }
-$('who').onclick = askName;
-
+function showWho(){
+  $('who').textContent = name ? 'مرحباً، ' + name : 'اضغط لكتابة اسمك';
+  $('avatar').textContent = name ? name.trim()[0] : '؟';
+  $('adminLink').hidden = !!pin;
+  $('navAdmin').hidden = !pin;
+}
+$('who').onclick = askName; $('avatar').onclick = askName;
 $('adminLink').onclick = e => { e.preventDefault(); $('pinInput').value = ''; $('pinModal').hidden = false; $('pinInput').focus(); };
 $('pinCancel').onclick = () => $('pinModal').hidden = true;
 $('pinSave').onclick = async () => {
@@ -481,44 +790,25 @@ $('pinSave').onclick = async () => {
   try { d = await api({ action: 'checkpin', pin: $('pinInput').value }); }
   catch (e) { return toast(e.message); }
   pin = $('pinInput').value; store.set('admin_pin', pin); store.set('admin_name', d.supervisor || '');
-  $('pinModal').hidden = true; showWho(); render(); loadGroups(); toast('أهلاً ' + (d.supervisor || '') + ' — وضع المشرف مفعّل');
+  $('pinModal').hidden = true; showWho(); setView('admin'); loadGroups(); toast('أهلاً ' + (d.supervisor || '') + ' — وضع المشرف مفعّل');
 };
-$('logout').onclick = () => { pin = ''; store.set('admin_pin', ''); showWho(); render(); };
-const missingAll = new Set();
-$('addBtn').onclick = async () => {
-  const numbers = $('nums').value; if (!/\d/.test(numbers)) return;
-  const d = await act({ action: 'add', numbers, priority: $('urgent').checked ? 'high' : '' });
-  if (!d) return;
-  const parts = [];
-  if (d.added.length) parts.push(`أُضيفت: ${d.added.join('، ')}`);
-  if (d.already.length) parts.push(`موجودة مسبقاً: ${d.already.join('، ')}`);
-  $('addMsg').innerHTML = parts.map(esc).join('<br>');
-  if (d.added.length) { $('urgent').checked = false; toast(`تمت إضافة ${d.added.length} محطة`); }
-  // wrong numbers: a red alert that stays until the page is reloaded; the box keeps them for correcting
-  $('nums').value = d.missing.join(' ');
-  if (d.missing.length) {
-    d.missing.forEach(n => missingAll.add(n));
-    $('missingChips').innerHTML = [...missingAll].map(n => `<span>${esc(n)}</span>`).join('');
-    $('missingAlert').hidden = false;
-    $('missingAlert').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-};
+$('logout').onclick = e => { e.preventDefault(); pin = ''; store.set('admin_pin', ''); if (selecting) setSelecting(false); showWho(); setView('list'); };
 
 // ---------- location & refresh ----------
-function setStatus(cls, text){ $('status').className = 'sub ' + cls; $('statusText').textContent = text; }
+function setLoc(cls, text){ $('loc').className = 'loc ' + cls; $('locText').textContent = text; }
 if ('geolocation' in navigator) {
   navigator.geolocation.watchPosition(p => {
     const firstFix = !me;
     me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
-    setStatus('ok', `تم تحديد موقعك (دقة ±${Math.round(me.acc)} م) — القائمة مرتبة من الأقرب`);
+    setLoc('ok', `موقعك محدّث · دقة ±${Math.round(me.acc)} م`);
     const icon = L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
     if (meMarker) meMarker.setLatLng([me.lat, me.lng]);
     else meMarker = L.marker([me.lat, me.lng], { icon, zIndexOffset: 1000 }).addTo(map);
     if (firstFix) fitted = false;
-    render();
-  }, () => setStatus('bad', 'لم يتم السماح بالموقع — فعّل خدمات الموقع للمتصفح'),
+    render(); checkArrival();
+  }, () => setLoc('bad', 'الموقع غير مفعّل — فعّل خدمات الموقع للمتصفح'),
      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
-} else setStatus('bad', 'المتصفح لا يدعم تحديد الموقع');
+} else setLoc('bad', 'المتصفح لا يدعم تحديد الموقع');
 
 $('refresh').onclick = () => load().then(() => toast('تم التحديث'));
 window.addEventListener('hashchange', () => location.reload());   // switching between the main list and a task link

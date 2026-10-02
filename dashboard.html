@@ -6,45 +6,37 @@
 <meta name="robots" content="noindex, nofollow">
 <title>لوحة التحكم</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* SE brand palette (SE BRAND.pdf §07); Readex Pro stands in for the private SE Heartbeat font. */
 :root{
-  --bg:#f4f6f8; --card:#ffffff; --ink:#14202b; --muted:#66727e; --line:#e3e7eb; --soft:#f0f3f5;
-  --brand:#0b6e4f; --brand-ink:#ffffff; --near:#e8f5ef;
-  --amber:#b45309; --amber-bg:#fff4e0; --danger:#b42318; --danger-bg:#fdecea;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a; --soft:#1e272f;
-    --brand:#2fb383; --brand-ink:#06140e; --near:#13281f;
-    --amber:#f5a35b; --amber-bg:#2a1d10; --danger:#f97066; --danger-bg:#2c1513;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0f1418; --card:#182027; --ink:#e8edf1; --muted:#93a0ab; --line:#26313a; --soft:#1e272f;
-  --brand:#2fb383; --brand-ink:#06140e; --near:#13281f;
-  --amber:#f5a35b; --amber-bg:#2a1d10; --danger:#f97066; --danger-bg:#2c1513;
+  --bg:#F2F3F5; --card:#ffffff; --ink:#00183A; --muted:#5B6575; --line:#E6E8EB; --soft:#F2F3F5;
+  --brand:#0027B9; --brand-ink:#ffffff; --near:#DDF6EC;
+  --amber:#8A5400; --amber-bg:#FFF3DC; --danger:#A8003F; --danger-bg:#FDE6EE;
+  --db:#001F5E; --tg:#00B476; --to:#EF9B00; --tr:#E10054;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);
-  font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;-webkit-text-size-adjust:100%}
+  font-family:"Readex Pro",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;-webkit-text-size-adjust:100%}
 button,input,select,textarea{font:inherit;color:inherit}
-header{position:sticky;top:0;z-index:10;background:var(--card);border-bottom:1px solid var(--line);
-  padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top))}
+header{position:sticky;top:0;z-index:10;background:var(--db);color:#fff;overflow:hidden;
+  padding:14px 16px;padding-top:max(14px,env(safe-area-inset-top))}
+header svg.wave{position:absolute;left:0;right:0;bottom:-8px;width:100%;height:70px;opacity:.5;pointer-events:none}
+header .bar,header .updated{position:relative;z-index:1}
 .bar{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-h1{font-size:18px;margin:0;font-weight:700;flex:1;min-width:140px}
-.seg{display:flex;background:var(--soft);border-radius:10px;padding:3px}
-.seg button{border:0;background:none;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--muted)}
-.seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.icon-btn{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:6px 10px;font-size:13px;cursor:pointer}
-.updated{font-size:12px;color:var(--muted);max-width:1100px;margin:6px auto 0}
+h1{font-size:20px;margin:0;font-weight:600;flex:1;min-width:140px}
+.seg{display:flex;background:rgba(255,255,255,.1);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer;color:#C9D6F2}
+.seg button.on{background:#fff;color:var(--db);font-weight:600}
+.icon-btn{border:0;background:rgba(255,255,255,.12);color:#fff;border-radius:10px;padding:7px 12px;font-size:13px;cursor:pointer}
+.updated{font-size:12px;color:#AFC0E0;max-width:1100px;margin:6px auto 0}
 main{max-width:1100px;margin:0 auto;padding:16px 16px 48px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 .kpi .label{font-size:13px;color:var(--muted)}
 .kpi .value{font-size:28px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
 .kpi .hint{font-size:12px;color:var(--muted);margin-top:2px}
-.kpi.red .value{color:var(--danger)} .kpi.amber .value{color:var(--amber)} .kpi.green .value{color:var(--brand)}
+.kpi.red .value{color:var(--danger)} .kpi.amber .value{color:var(--amber)} .kpi.green .value{color:#00744C}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
 @media (max-width:760px){.grid2{grid-template-columns:1fr}}
 section.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px;min-width:0}
@@ -59,12 +51,12 @@ tr:last-child td{border-bottom:0}
 .num{font-weight:700;direction:ltr;text-align:right}
 .meter{display:flex;align-items:center;gap:8px;min-width:110px}
 .meter span{flex:1;height:6px;background:var(--soft);border-radius:3px;overflow:hidden}
-.meter i{display:block;height:100%;background:var(--brand)}
+.meter i{display:block;height:100%;background:var(--tg)}
 .meter b{font-size:12px;font-weight:600;color:var(--muted);min-width:34px}
 .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px}
 .pill.open{background:var(--soft);color:var(--muted)}
 .pill.claimed{background:var(--amber-bg);color:var(--amber)}
-.pill.done{background:var(--near);color:var(--brand)}
+.pill.done{background:var(--near);color:#00744C}
 .pill.red{background:var(--danger-bg);color:var(--danger)}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .filters input,.filters select{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 10px;font-size:14px}
@@ -118,6 +110,12 @@ tr:last-child td{border-bottom:0}
     <button class="icon-btn" id="logout">خروج</button>
   </div>
   <div class="updated" id="updated"></div>
+  <svg class="wave" viewBox="0 0 400 80" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="wg" x1="0" x2="1"><stop offset="0" stop-color="#0027B9" stop-opacity="0"/><stop offset=".45" stop-color="#0080FF"/><stop offset="1" stop-color="#00FF86"/></linearGradient></defs>
+    <g fill="none" stroke="url(#wg)" stroke-width=".7">
+      <path d="M0 62 C70 62 90 70 140 52 S220 6 270 20 S340 70 400 40"/><path d="M0 64 C70 64 92 72 142 55 S222 10 272 24 S342 72 400 44"/>
+      <path d="M0 66 C70 66 94 74 144 58 S224 14 274 28 S344 74 400 48"/><path d="M0 68 C70 68 96 76 146 61 S226 18 276 32 S346 76 400 52"/>
+      <path d="M0 70 C70 70 98 78 148 64 S228 22 278 36 S348 78 400 56"/></g></svg>
 </header>
 
 <main>
