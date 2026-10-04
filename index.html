@@ -147,6 +147,29 @@ details.done-wrap .stack{display:flex;flex-direction:column;gap:10px}
 .grp{background:#fff;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(0,24,58,.05)}
 .grp b{flex:1;min-width:120px;font-weight:600}
 .grp small{width:100%;color:var(--muted);font-size:12px;font-weight:300}
+.task{background:#fff;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 2px rgba(0,24,58,.06);width:100%;text-align:right}
+.task .top{display:flex;align-items:center;gap:8px;width:100%}
+.task b{flex:1;font-size:15.5px;font-weight:600;color:var(--db)}
+.task .pct{font-weight:600;color:var(--blue);font-size:15px;direction:ltr}
+.task small{color:var(--muted);font-size:12px;font-weight:300}
+.task .go{color:var(--blue);font-size:18px;font-weight:600}
+.pbar{height:8px;border-radius:99px;background:var(--edb5);overflow:hidden;display:flex;width:100%}
+.pbar i{background:var(--tg);height:100%}
+.pbar i.c{background:var(--to)}
+.pbar.big{height:12px}
+.tback{align-self:flex-start;color:var(--blue);font-size:14px;font-weight:500;padding:4px 2px}
+.thead{background:var(--db);color:#fff;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.thead h2{margin:0;font-size:19px;font-weight:600}
+.thead small{color:#C9D6F2;font-size:12px;font-weight:300}
+.thead .pbar{background:rgba(255,255,255,.15)}
+.tstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tstats div{background:rgba(255,255,255,.08);border-radius:12px;padding:8px 6px;text-align:center;font-size:12px;color:#C9D6F2}
+.tstats b{display:block;font-size:22px;font-weight:600;color:#fff}
+.tstats .d b{color:var(--g)}
+.tstats .c b{color:#FFC35C}
+.tcrew{display:flex;flex-wrap:wrap;gap:6px}
+.tcrew span{background:#fff;border-radius:999px;padding:5px 11px;font-size:12.5px;box-shadow:0 1px 2px rgba(0,24,58,.05)}
+.tcrew span b{color:var(--tg);font-weight:600}
 .selbar{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:1400;background:var(--db);color:#fff;
   padding:12px 14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 -8px 24px rgba(0,24,58,.2)}
 .selbar .top{display:flex;align-items:center;gap:8px}
@@ -183,6 +206,15 @@ details.done-wrap .stack{display:flex;flex-direction:column;gap:10px}
 .modal input{width:100%;font-size:17px;height:50px;padding:0 12px;border-radius:12px;border:1.5px solid var(--edb25);background:#fff}
 .modal input:focus{outline:0;border-color:var(--blue)}
 .modal .acts .btn{flex:1}
+.modal form{display:flex;flex-direction:column;gap:10px}
+.modal form[hidden]{display:none}
+.modal input.code{font-size:26px;letter-spacing:10px;text-align:center;direction:ltr;font-weight:600}
+.modal input.code::placeholder{font-size:16px;letter-spacing:0;font-weight:300}
+.modal .links{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;font-size:13px}
+.modal .links a{color:var(--blue)}
+.modal .links.sub a{color:var(--muted)}
+.modal .err{background:var(--red-bg);border:1.5px solid var(--tr);border-radius:12px;padding:9px 12px;color:var(--red-ink);font-size:13px}
+.modal .lbl{font-size:12.5px;color:var(--muted);margin:2px 2px -6px}
 .linkbox{direction:ltr;font-size:13px;word-break:break-all;background:var(--edb5);border-radius:12px;padding:10px}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);z-index:4000;max-width:560px;margin:0 auto;
   background:var(--db);color:#fff;padding:13px 16px;border-radius:14px;font-size:14.5px;font-weight:500;text-align:center;
@@ -259,13 +291,19 @@ details.done-wrap .stack{display:flex;flex-direction:column;gap:10px}
       <div class="alert" id="missingAlert" role="alert" hidden><b>⚠ أرقام غير موجودة في ملف المحطات — تأكد من الرقم</b><span id="missingList"></span></div>
       <div class="okmsg" id="addMsg"></div>
     </div>
-    <div class="seg" id="adminSeg"><button data-m="recent">الأحدث إضافة</button><button data-m="near">الأقرب</button><button data-m="group">مهمة خاصة</button></div>
+    <div class="seg" id="adminSeg"><button data-m="recent">الأحدث إضافة</button><button data-m="near">الأقرب</button><button data-m="tasks">المهام</button></div>
     <div class="hint" id="adminHint"></div>
     <div id="adminRows" style="display:flex;flex-direction:column;gap:8px"></div>
     <details class="done-wrap" id="adminDoneWrap" hidden><summary id="adminDoneSum"></summary><div class="stack" id="adminDone" style="gap:8px"></div></details>
-    <div id="groupsWrap" hidden>
-      <div class="sect">المهام الخاصة السابقة</div>
+    <div id="tasksWrap" hidden>
+      <button class="btn pri" id="newTask" style="width:100%">＋ مهمة جديدة</button>
       <div class="groups" id="groups"></div>
+    </div>
+    <div id="taskView" class="groups" hidden></div>
+    <div id="opsWrap" hidden>
+      <div class="sect">المشغلون المسجّلون</div>
+      <div class="hint">نسي المشغل كوده؟ «إعادة تعيين» تمسح الكود فيسجّل من جديد بنفس رقمه الوظيفي.</div>
+      <div class="groups" id="ops"></div>
     </div>
     <div class="acts" style="margin-top:6px"><a class="btn sec" style="flex:1" id="logout" href="#">خروج من وضع المشرف</a></div>
   </section>
@@ -285,10 +323,28 @@ details.done-wrap .stack{display:flex;flex-direction:column;gap:10px}
 <div class="scrim" id="scrim" hidden></div>
 <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true"></div>
 
-<div class="modal" id="nameModal" hidden><div class="box">
-  <h3>اسمك</h3><p>يظهر للفريق عند حجز محطة أو إنهائها.</p>
-  <input id="nameInput" autocomplete="name" placeholder="مثال: أحمد العتيبي">
-  <div class="acts"><button class="btn pri" id="nameSave">حفظ</button></div>
+<div class="modal" id="loginModal" hidden><div class="box">
+  <!-- returning operator: the personal code only -->
+  <form id="lgLogin" autocomplete="on">
+    <h3 id="lgHello">دخول المشغل</h3><p id="lgSub">أدخل كودك الخاص.</p>
+    <input id="lgEmp" inputmode="numeric" autocomplete="username" placeholder="الرقم الوظيفي">
+    <input id="lgCode" class="code" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password" placeholder="الكود الخاص">
+    <div class="acts"><button class="btn pri" id="lgEnter">دخول</button></div>
+    <div class="links"><a href="#" id="lgToReg">أول مرة؟ تسجيل جديد</a><a href="#" id="lgOther" hidden>دخول بحساب آخر</a></div>
+  </form>
+  <!-- first time: employee number + name + a personal code -->
+  <form id="lgReg" autocomplete="on" hidden>
+    <h3>تسجيل المشغل — أول مرة</h3><p>مرة واحدة فقط، وبعدها تدخل بكودك الخاص. لا تعطِ الكود لأحد.</p>
+    <input id="rgEmp" inputmode="numeric" autocomplete="username" placeholder="الرقم الوظيفي">
+    <input id="rgName" autocomplete="name" maxlength="40" placeholder="الاسم الثنائي — يظهر للفريق">
+    <div class="lbl">الكود الخاص: 4 أرقام أو أكثر، غير متكررة وغير متسلسلة</div>
+    <input id="rgCode" class="code" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="اختر كودك">
+    <input id="rgCode2" class="code" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" placeholder="أعد كتابة الكود">
+    <div class="acts"><button class="btn pri" id="rgSave">تسجيل ودخول</button></div>
+    <div class="links"><a href="#" id="rgToLogin">عندي حساب — دخول بالكود</a></div>
+  </form>
+  <div class="err" id="lgErr" role="alert" hidden></div>
+  <div class="links sub"><a href="#" id="lgAdmin">دخول المشرف</a></div>
 </div></div>
 <div class="modal" id="pinModal" hidden><div class="box">
   <h3>دخول المشرف</h3><p>أدخل رمز المشرف.</p>
@@ -321,7 +377,10 @@ const store = {
   get(k){ try { return localStorage.getItem(k) || ''; } catch { return ''; } },
   set(k, v){ try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} }
 };
-let name = store.get('tech_name'), pin = store.get('admin_pin');
+// operator session: the server issues a token at sign-in; the name shown is the registered one, never typed per action
+let token = store.get('op_token'), name = store.get('op_name'), emp = store.get('op_emp'), pin = store.get('admin_pin');
+if (token && !(Date.parse(store.get('op_exp')) > Date.now())) { token = ''; store.set('op_token', ''); }
+store.set('tech_name', '');      // the old free-typed name is no longer used
 let items = [], me = null, busy = false;
 // a special-task link (#g=<id>) shows only that task's stations
 const G = new URLSearchParams(location.hash.slice(1)).get('g') || '';
@@ -351,10 +410,11 @@ const stationsWord = n => n >= 3 && n <= 10 ? 'محطات' : 'محطة';
 // count with the right Arabic form: محطة واحدة · محطتان · 3 محطات · 11 محطة
 const stations = n => n === 1 ? 'محطة واحدة' : n === 2 ? 'محطتان' : `${n} ${stationsWord(n)}`;
 const km = r => (r / 1000) + ' كم';
-const mine = n => !!n && n === name;
+// is this mine? by employee number; rows from before accounts only carry a name
+const mine = (n, e) => !!token && (e ? String(e) === emp : !!n && n === name);
 const isUrgent = s => s.priority === 'high' && s.status !== 'done';
 // urgent stations nobody has taken yet (or that I took) jump to the top of everyone's list
-const isTop = s => isUrgent(s) && (s.status === 'open' || mine(s.claimed_by));
+const isTop = s => isUrgent(s) && (s.status === 'open' || mine(s.claimed_by, s.claimed_emp));
 const dist = s => me ? meters(me, s) : null;
 const canDone = s => me && s.status !== 'done' && meters(me, s) <= RADIUS_M + Math.min(me.acc || 0, GPS_TOLERANCE_M);
 const navIcon = s => `<a class="btn ico" href="${navUrl(s)}" target="_blank" rel="noopener" aria-label="ملاحة"><svg width="20" height="20"><use href="#i-nav"/></svg></a>`;
@@ -371,7 +431,7 @@ async function api(body){
     ? await fetch(API, { method: 'POST', body: JSON.stringify(body) })   // text/plain: no CORS preflight
     : await fetch(API + (API.includes('?') ? '&' : '?') + 't=' + Date.now() + (G ? '&g=' + encodeURIComponent(G) : ''));
   const data = await res.json();
-  if (data.error) throw new Error(data.error);
+  if (data.error) { const e = new Error(data.error); e.auth = !!data.auth; if (e.auth) sessionEnded(); throw e; }
   if (G && data.group) { const t = data.group.name || 'مهمة خاصة'; $('title').textContent = t; document.title = t; }
   // while optimistic changes are still on their way, only the last reply may replace the list
   if (data.items && (body ? pending <= 1 : pending === 0)) { items = data.items.map(i => ({ ...i, lat: +i.lat, lng: +i.lng })); render(); }
@@ -387,7 +447,7 @@ function quick(body, change, okText){
   render();
   if (okText) toast(okText);
   pending++;
-  queue = queue.then(() => api({ name, pin, g: G, ...body }))
+  queue = queue.then(() => api({ token, pin, g: G, ...body }))
     .catch(e => { items = JSON.parse(before); render(); toast(e.message); })   // rejected: put it back, say why
     .finally(() => { pending--; });
 }
@@ -395,7 +455,7 @@ const nowIso = () => new Date().toISOString();
 const patch = (id, fields) => () => { const s = items.find(x => x.id === id); if (s) Object.assign(s, fields); };
 async function act(body, okText){
   if (busy) return; busy = true; document.body.style.cursor = 'progress';
-  try { const d = await api({ name, pin, g: G, ...body }); if (okText) toast(okText); return d; }
+  try { const d = await api({ token, pin, g: G, ...body }); if (okText) toast(okText); return d; }
   catch (e) { toast(e.message); }
   finally { busy = false; document.body.style.cursor = ''; }
 }
@@ -418,7 +478,9 @@ function setMapBig(on){
 $('mapBtn').onclick = () => setMapBig(!$('mapwrap').classList.contains('big'));
 
 function mapItems(){
-  if (view === 'mine') return items.filter(s => mine(s.claimed_by) || mine(s.done_by));
+  if (view === 'mine') return items.filter(s => mine(s.claimed_by, s.claimed_emp) || mine(s.done_by, s.done_emp));
+  const t = view === 'admin' && adminMode === 'tasks' && !selecting && groups.find(g => g.id === taskId);
+  if (t) { const ids = new Set(t.ids); return items.filter(s => ids.has(s.id)); }
   return items;
 }
 function drawMap(){
@@ -446,10 +508,10 @@ function fitView(){
 
 // ---------- station card (operator) ----------
 function card(s, opts = {}){
-  const d = dist(s), urgent = isUrgent(s), other = s.status === 'claimed' && !mine(s.claimed_by);
+  const d = dist(s), urgent = isUrgent(s), other = s.status === 'claimed' && !mine(s.claimed_by, s.claimed_emp);
   const pills = [];
   if (urgent) pills.push('<span class="pill u">عاجلة</span>');
-  if (s.status === 'claimed') pills.push(`<span class="pill c">${mine(s.claimed_by) ? 'أنت في الطريق' : esc(s.claimed_by) + ' في الطريق'}</span>`);
+  if (s.status === 'claimed') pills.push(`<span class="pill c">${mine(s.claimed_by, s.claimed_emp) ? 'أنت في الطريق' : esc(s.claimed_by) + ' في الطريق'}</span>`);
   if (s.status === 'done') pills.push(`<span class="pill d">تمت · ${esc(s.done_by)} · ${time(s.done_at)}${s.confirmed_by ? ' · بتأكيد المشرف' : ''}</span>`);
   if (opts.nearest) pills.push('<span class="pill m">الأقرب</span>');
   let acts = '';
@@ -459,7 +521,7 @@ function card(s, opts = {}){
     acts = `<button class="btn go" data-a="done" data-id="${s.id}">✓ تمت المعالجة</button>`;
   } else if (s.status === 'open') {
     acts = `<button class="btn pri" data-a="claim" data-id="${s.id}">أنا في الطريق</button>${navIcon(s)}`;
-  } else if (mine(s.claimed_by)) {
+  } else if (mine(s.claimed_by, s.claimed_emp)) {
     acts = `<a class="btn pri" href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a><button class="btn sec" data-a="unclaim" data-id="${s.id}">إلغاء</button>`;
   }
   const cls = `st ${s.status}${urgent ? ' urgent' : ''}${other ? ' muted' : ''}`;
@@ -490,7 +552,7 @@ function renderList(){
   $('doneList').innerHTML = done.map(s => card(s)).join('');
 
   // "around you" summary — available = not done and not taken by someone else
-  const avail = open.filter(s => s.status === 'open' || mine(s.claimed_by));
+  const avail = open.filter(s => s.status === 'open' || mine(s.claimed_by, s.claimed_emp));
   const near = avail.filter(inR);
   $('nearCount').textContent = near.length;
   $('nearLabel').textContent = me && radius ? `${stationsWord(near.length)} حولك ضمن ${km(radius)}` : `${stationsWord(near.length)} متاحة`;
@@ -512,8 +574,8 @@ function routeOrder(list){
   return out;
 }
 function renderMine(){
-  const doneMine = items.filter(s => s.status === 'done' && mine(s.done_by)).sort((a, b) => String(a.done_at).localeCompare(String(b.done_at)));
-  const todo = routeOrder(items.filter(s => s.status === 'claimed' && mine(s.claimed_by)));
+  const doneMine = items.filter(s => s.status === 'done' && mine(s.done_by, s.done_emp)).sort((a, b) => String(a.done_at).localeCompare(String(b.done_at)));
+  const todo = routeOrder(items.filter(s => s.status === 'claimed' && mine(s.claimed_by, s.claimed_emp)));
   const total = doneMine.length + todo.length;
   $('mineBadge').hidden = !todo.length; $('mineBadge').textContent = todo.length;
   $('mineEmpty').hidden = total > 0;
@@ -534,7 +596,11 @@ function renderMine(){
 function renderAdmin(){
   $('navAdmin').hidden = !pin;
   if (!pin) return;
-  for (const b of $('adminSeg').children) b.classList.toggle('on', b.dataset.m === (selecting ? 'group' : adminMode));
+  for (const b of $('adminSeg').children) b.classList.toggle('on', b.dataset.m === (selecting ? 'tasks' : adminMode));
+  const tasks = adminMode === 'tasks' && !selecting;
+  $('tasksWrap').hidden = !tasks || !!taskId; $('taskView').hidden = !tasks || !taskId;
+  $('adminRows').hidden = tasks; $('adminHint').hidden = tasks;
+  if (tasks) { $('adminDoneWrap').hidden = true; renderTasks(); return; }
   const open = items.filter(s => s.status !== 'done');
   const order = adminMode === 'near' && me
     ? (a, b) => meters(me, a) - meters(me, b)
@@ -554,7 +620,6 @@ function renderAdmin(){
   $('adminDoneWrap').hidden = !done.length || selecting;
   $('adminDoneSum').textContent = `المنجزة (${done.length}) ▾`;
   $('adminDone').innerHTML = done.map(row).join('');
-  $('groupsWrap').hidden = !selecting && adminMode !== 'group';
 }
 
 function render(){
@@ -588,7 +653,7 @@ function renderSheet(){
   if (!s) return closeSheet();
   const d = dist(s), urgent = isUrgent(s);
   const pills = [urgent ? '<span class="pill u">عاجلة</span>' : '',
-    s.status === 'claimed' ? `<span class="pill c">${mine(s.claimed_by) ? 'أنت في الطريق' : esc(s.claimed_by) + ' في الطريق'}</span>` : '',
+    s.status === 'claimed' ? `<span class="pill c">${mine(s.claimed_by, s.claimed_emp) ? 'أنت في الطريق' : esc(s.claimed_by) + ' في الطريق'}</span>` : '',
     s.status === 'done' ? `<span class="pill d">تمت · ${esc(s.done_by)} · ${time(s.done_at)}${s.confirmed_by ? ' · بتأكيد المشرف' : ''}</span>` : ''].join('');
   let body = '';
   if (s.status !== 'done') {
@@ -597,10 +662,10 @@ function renderSheet(){
       : `<div class="far">${d == null ? 'حدد موقعك لمعرفة المسافة' : `تبعد ${fmt(d)} · تقريباً ${mins(d)} د`}</div>`;
     const g = [`<a class="btn ${canDone(s) || s.status === 'open' ? 'sec' : 'pri'}" href="${navUrl(s)}" target="_blank" rel="noopener">ابدأ الملاحة</a>`];
     if (s.status === 'open') g.push(`<button class="btn ${canDone(s) ? 'sec' : 'pri'}" data-a="claim" data-id="${s.id}">أنا في الطريق</button>`);
-    if (s.status === 'claimed' && (mine(s.claimed_by) || sheetAdmin)) g.push(`<button class="btn sec" data-a="unclaim" data-id="${s.id}">إلغاء الحجز</button>`);
+    if (s.status === 'claimed' && (mine(s.claimed_by, s.claimed_emp) || sheetAdmin)) g.push(`<button class="btn sec" data-a="unclaim" data-id="${s.id}">إلغاء الحجز</button>`);
     body += `<div class="grid">${g.join('')}</div>`;
     if (!canDone(s)) body += `<div class="note">«تمت المعالجة» يظهر عند وصولك للمحطة (ضمن ٣٠ م)</div>`;
-  } else if (mine(s.done_by) || sheetAdmin) {
+  } else if (mine(s.done_by, s.done_emp) || sheetAdmin) {
     body += `<button class="btn sec" data-a="undo" data-id="${s.id}">تراجع عن الإنجاز</button>`;
   }
   if (sheetAdmin) {
@@ -619,7 +684,7 @@ function renderSheet(){
 // arriving at one of my stations opens the sheet once, with the big «تمت المعالجة» button
 function checkArrival(){
   if (sheetId || selecting) return;
-  const s = items.find(x => x.status === 'claimed' && mine(x.claimed_by) && canDone(x) && !arrivedShown.has(x.id));
+  const s = items.find(x => x.status === 'claimed' && mine(x.claimed_by, x.claimed_emp) && canDone(x) && !arrivedShown.has(x.id));
   if (s) { arrivedShown.add(s.id); openSheet(s.id, false); }
 }
 
@@ -632,17 +697,18 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const id = b.dataset.id, a = b.dataset.a, s = items.find(x => x.id === id);
   if (!s) return;
-  if (!name && ['claim', 'unclaim', 'done', 'undo'].includes(a)) return askName();
+  if (!token && !pin && ['claim', 'unclaim', 'done', 'undo'].includes(a)) return askLogin();
+  if (!token && ['claim', 'done'].includes(a)) return askLogin();
   if (a === 'confirm') { closeSheet(); return openConfirm(s); }
-  if (a === 'claim') quick({ action: 'claim', id }, patch(id, { status: 'claimed', claimed_by: name, claimed_at: nowIso() }), 'تمت إضافة المحطة لمهامك');
-  if (a === 'unclaim') quick({ action: 'unclaim', id }, patch(id, { status: 'open', claimed_by: '', claimed_at: '' }), 'تم إلغاء الحجز');
+  if (a === 'claim') quick({ action: 'claim', id }, patch(id, { status: 'claimed', claimed_by: name, claimed_emp: emp, claimed_at: nowIso() }), 'تمت إضافة المحطة لمهامك');
+  if (a === 'unclaim') quick({ action: 'unclaim', id }, patch(id, { status: 'open', claimed_by: '', claimed_emp: '', claimed_at: '' }), 'تم إلغاء الحجز');
   if (a === 'done') {
     if (!confirm(`تأكيد: تمت معالجة المحطة S${s.station}؟`)) return;
     closeSheet();
-    quick({ action: 'done', id, lat: me.lat, lng: me.lng, acc: me.acc }, patch(id, { status: 'done', done_by: name, done_at: nowIso(), confirmed_by: '' }), 'تم تسجيل المعالجة ✓');
+    quick({ action: 'done', id, lat: me.lat, lng: me.lng, acc: me.acc }, patch(id, { status: 'done', done_by: name, done_emp: emp, done_at: nowIso(), confirmed_by: '' }), 'تم تسجيل المعالجة ✓');
   }
   if (a === 'undo' && confirm(`التراجع عن معالجة S${s.station}؟`))
-    quick({ action: 'undo', id }, patch(id, { status: 'open', claimed_by: '', claimed_at: '', done_by: '', done_at: '', confirmed_by: '' }), 'تم التراجع');
+    quick({ action: 'undo', id }, patch(id, { status: 'open', claimed_by: '', claimed_emp: '', claimed_at: '', done_by: '', done_emp: '', done_at: '', confirmed_by: '' }), 'تم التراجع');
   if (a === 'priority') {
     const high = s.priority !== 'high';
     quick({ action: 'priority', id, priority: high ? 'high' : '' }, patch(id, { priority: high ? 'high' : '' }), high ? 'أصبحت عاجلة — تظهر أعلى القائمة للجميع' : 'أُلغيت العجلة');
@@ -657,7 +723,7 @@ document.addEventListener('click', async e => {
 let cId = null;
 function openConfirm(s){
   cId = s.id;
-  const ops = [...new Set(items.flatMap(i => [i.claimed_by, i.done_by]).filter(Boolean))].sort();
+  const ops = [...new Set(operators.map(o => o.name).concat(items.flatMap(i => [i.claimed_by, i.done_by])).filter(Boolean))].sort();
   $('techList').innerHTML = ops.map(n => `<option value="${esc(n)}">`).join('');
   $('cTitle').textContent = `تأكيد إنجاز S${s.station}`;
   $('cTech').value = s.claimed_by || ''; $('cNote').value = '';
@@ -723,15 +789,14 @@ $('addBtn').onclick = async () => {
     $('missingList').textContent = [...missingAll].join('، ');
     $('missingAlert').hidden = false;
   }
-  if (adminMode === 'group') adminMode = 'recent';
   render();
 };
 
 // ---------- supervisor: list modes + special tasks ----------
 $('adminSeg').addEventListener('click', e => {
   const b = e.target.closest('button[data-m]'); if (!b) return;
-  if (b.dataset.m === 'group') { adminMode = 'group'; setSelecting(true); loadGroups(); return; }
   if (selecting) setSelecting(false);
+  if (b.dataset.m === 'tasks') { adminMode = 'tasks'; taskId = null; render(); loadGroups(); return; }
   adminMode = b.dataset.m; store.set('sort_mode', adminMode); render();
 });
 function updSelCount(){ $('selCount').textContent = sel.size ? `محدد: ${stations(sel.size)}` : 'حدد المحطات من الخريطة أو القائمة'; }
@@ -749,7 +814,7 @@ function setSelecting(on){
     const open = items.filter(s => s.status !== 'done');
     if (open.length) setTimeout(() => map.fitBounds(L.latLngBounds(open.map(s => [s.lat, s.lng])).pad(0.1)), 280);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  } else if (adminMode === 'group') adminMode = store.get('sort_mode') === 'near' ? 'near' : 'recent';
+  }
   render();
 }
 $('selCancel').onclick = () => setSelecting(false);
@@ -758,7 +823,7 @@ $('selCreate').onclick = async () => {
   if (!sel.size) return toast('حدد محطة واحدة على الأقل');
   const d = await act({ action: 'group_create', ids: [...sel], title: $('selName').value.trim() });
   if (!d || !d.group) return;
-  setSelecting(false); showLink(d.group); loadGroups();
+  setSelecting(false); adminMode = 'tasks'; await loadGroups(); openTask(d.group.id); showLink(d.group);
 };
 function showLink(gr){
   const url = linkFor(gr.id), label = gr.name || 'مهمة خاصة';
@@ -772,43 +837,164 @@ $('linkCopy').onclick = async () => {
   try { await navigator.clipboard.writeText($('linkText').textContent); toast('تم نسخ الرابط'); }
   catch { toast('انسخ الرابط يدوياً'); }
 };
-let groups = [];
+let groups = [], taskId = null;
 async function loadGroups(){
   if (!pin) return;
+  loadOps();
   try { const d = await api({ action: 'group_list', pin, g: G }); groups = d.groups || []; }
   catch { groups = []; }
-  $('groups').innerHTML = groups.length ? groups.map(gr => `<div class="grp">
-      <b>${esc(gr.name || 'مهمة خاصة')}</b>
-      <button class="btn sec sm" data-g="copy" data-gid="${gr.id}">الرابط</button>
-      <a class="btn sec sm" href="${linkFor(gr.id)}">فتح</a>
-      <button class="btn warn sm" data-g="del" data-gid="${gr.id}">حذف</button>
-      <small>${gr.done} من ${gr.count} تمت · ${esc(gr.created_by || '')} · ${when(gr.created_at)}</small></div>`).join('')
-    : '<div class="hint">لا توجد مهام خاصة بعد.</div>';
+  if (taskId && !groups.some(g => g.id === taskId)) taskId = null;
+  render();
 }
-$('groups').addEventListener('click', async e => {
+// live progress of a task, from the board the page already has
+function taskStats(gr){
+  const ids = new Set(gr.ids || []), its = items.filter(s => ids.has(s.id));
+  const done = its.filter(s => s.status === 'done'), on = its.filter(s => s.status === 'claimed');
+  return { its, done, on, left: its.length - done.length - on.length, pct: its.length ? Math.round(done.length / its.length * 100) : 0 };
+}
+const bar = (t, big) => `<div class="pbar${big ? ' big' : ''}"><i style="width:${t.its.length ? t.done.length / t.its.length * 100 : 0}%"></i><i class="c" style="width:${t.its.length ? t.on.length / t.its.length * 100 : 0}%"></i></div>`;
+function renderTasks(){
+  if (!taskId) {
+    $('groups').innerHTML = groups.length ? groups.map(gr => {
+      const t = taskStats(gr);
+      return `<button class="task" data-task="${gr.id}">
+        <span class="top"><b>${esc(gr.name || 'مهمة خاصة')}</b><span class="pct">${t.pct}%</span><span class="go">‹</span></span>
+        ${bar(t)}
+        <small>${t.done.length} من ${t.its.length} تمت${t.on.length ? ` · ${t.on.length} في الطريق` : ''} · ${esc(gr.created_by || '')} · ${when(gr.created_at)}</small></button>`;
+    }).join('') : '<div class="hint" style="text-align:center;padding:16px 0">لا توجد مهام بعد — أنشئ أول مهمة من «مهمة جديدة».</div>';
+    return;
+  }
+  const gr = groups.find(g => g.id === taskId); if (!gr) return;
+  const t = taskStats(gr);
+  // who finished how many in this task
+  const crew = {};
+  t.done.forEach(s => crew[s.done_by] = (crew[s.done_by] || 0) + 1);
+  t.on.forEach(s => crew[s.claimed_by] = crew[s.claimed_by] || 0);
+  const order = s => s.status === 'claimed' ? 0 : s.status === 'open' ? 1 : 2;
+  const rows = t.its.slice().sort((a, b) => order(a) - order(b) || String(b.done_at).localeCompare(String(a.done_at)) || a.station - b.station);
+  $('taskView').innerHTML = `<button class="tback" data-task="">→ كل المهام</button>
+    <div class="thead"><h2>${esc(gr.name || 'مهمة خاصة')}</h2>
+      <small>أنشأها ${esc(gr.created_by || '')} · ${when(gr.created_at)} · ${stations(t.its.length)}</small>
+      ${bar(t, true)}
+      <div class="tstats"><div class="d"><b>${t.done.length}</b>تمت</div><div class="c"><b>${t.on.length}</b>في الطريق</div><div><b>${t.left}</b>متبقية</div></div></div>
+    ${Object.keys(crew).length ? `<div class="sect">المشغلون في المهمة</div><div class="tcrew">${Object.entries(crew).sort((a, b) => b[1] - a[1]).map(([n, c]) => `<span>${esc(n)} · <b>${c}</b> تمت</span>`).join('')}</div>` : ''}
+    <div class="acts"><button class="btn pri" data-g="copy" data-gid="${gr.id}">رابط المهمة</button><a class="btn sec" href="${linkFor(gr.id)}">فتح كمشغل</a><button class="btn warn" data-g="del" data-gid="${gr.id}">حذف</button></div>
+    <div class="sect">محطات المهمة</div>
+    ${rows.map(s => `<button class="mini" data-row="${s.id}">
+      <span class="meta"><span class="num">S${s.station}</span><small>${s.status === 'done' ? `${esc(s.done_by)} · ${when(s.done_at)}${s.confirmed_by ? ' · بتأكيد المشرف' : ''}` : me ? fmt(meters(me, s)) : ''}</small></span>
+      <span class="end">${isUrgent(s) ? '<span class="pill u">عاجلة</span>' : ''}${s.status === 'done' ? '<span class="pill d">تمت</span>' : s.status === 'claimed' ? `<span class="pill c">${esc(s.claimed_by)} في الطريق</span>` : '<span class="pill">متبقية</span>'}<span class="more">⋯</span></span></button>`).join('')}`;
+}
+function openTask(id){
+  taskId = id || null; adminMode = 'tasks';
+  window.scrollTo({ top: 0 }); render(); fitView();
+}
+$('v-admin').addEventListener('click', e => { const b = e.target.closest('[data-task]'); if (b) openTask(b.dataset.task); });
+$('newTask').onclick = () => setSelecting(true);
+let operators = [];
+async function loadOps(){
+  if (!pin) return;
+  try { operators = (await api({ action: 'op_list', pin, g: G })).operators || []; }
+  catch { operators = []; }
+  $('opsWrap').hidden = !operators.length;
+  $('ops').innerHTML = operators.slice().sort((a, b) => a.name.localeCompare(b.name, 'ar')).map(o => `<div class="grp">
+      <b>${esc(o.name)}</b>
+      ${o.registered ? `<button class="btn sec sm" data-op="${esc(o.emp)}">إعادة تعيين الكود</button>` : ''}
+      <small>رقم وظيفي ${esc(o.emp)} · ${!o.registered ? 'بانتظار التسجيل من جديد' : o.locked ? 'مقفل مؤقتاً (محاولات خاطئة)' : o.last_login ? 'آخر دخول ' + when(o.last_login) : ''}</small></div>`).join('');
+}
+$('ops').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-op]'); if (!b) return;
+  const o = operators.find(x => x.emp === b.dataset.op); if (!o) return;
+  if (confirm(`إعادة تعيين كود ${o.name}؟\nيخرج من جلسته الحالية ويسجّل من جديد بنفس رقمه الوظيفي.`)) {
+    if (await act({ action: 'op_reset', emp: o.emp }, 'تمت إعادة التعيين — يسجّل المشغل من جديد')) loadOps();
+  }
+});
+$('v-admin').addEventListener('click', async e => {
   const b = e.target.closest('button[data-g]'); if (!b) return;
   const gr = groups.find(x => x.id === b.dataset.gid); if (!gr) return;
   if (b.dataset.g === 'copy') return showLink(gr);
   if (confirm(`حذف «${gr.name || 'مهمة خاصة'}»؟ يتوقف رابطها، والمحطات تبقى في القائمة العامة.`)) {
-    await act({ action: 'group_delete', gid: gr.id }, 'تم حذف المهمة'); loadGroups();
+    await act({ action: 'group_delete', gid: gr.id }, 'تم حذف المهمة'); taskId = null; loadGroups();
   }
 });
 
 // ---------- name / supervisor sign-in ----------
-function askName(){ $('nameInput').value = name; $('nameModal').hidden = false; $('nameInput').focus(); }
-$('nameSave').onclick = () => {
-  const v = $('nameInput').value.trim(); if (!v) return;
-  name = v; store.set('tech_name', v); $('nameModal').hidden = true; showWho(); render();
+// first time on a phone: employee number + name + personal code; after that: the code only
+function lgMode(reg){
+  $('lgLogin').hidden = reg; $('lgReg').hidden = !reg; $('lgErr').hidden = true;
+  const known = !!emp && !reg;
+  $('lgEmp').hidden = known; $('lgOther').hidden = !known;
+  $('lgHello').textContent = known ? 'أهلاً ' + name : 'دخول المشغل';
+  $('lgSub').textContent = known ? 'أدخل كودك الخاص للدخول.' : 'أدخل رقمك الوظيفي وكودك الخاص.';
+  $('lgCode').value = ''; $('rgCode').value = ''; $('rgCode2').value = '';
+  setTimeout(() => (reg ? $('rgEmp') : known ? $('lgCode') : $('lgEmp')).focus(), 50);
+}
+function askLogin(reg = !emp){ $('loginModal').hidden = false; lgMode(reg); }
+function lgError(t){ $('lgErr').textContent = t; $('lgErr').hidden = false; }
+function signedIn(d){
+  token = d.token; name = d.name; emp = d.emp;
+  store.set('op_token', token); store.set('op_name', name); store.set('op_emp', emp); store.set('op_exp', d.exp);
+  $('loginModal').hidden = true; showWho(); render(); toast('أهلاً ' + name);
+}
+// the server refused the token (expired, reset by a supervisor, or signed in on another phone)
+function sessionEnded(){
+  if (!token) return;
+  token = ''; store.set('op_token', ''); showWho();
+  if (!pin) setTimeout(() => askLogin(false), 0);
+}
+async function lgSubmit(body, btn){
+  if (btn.disabled) return;
+  btn.disabled = true; $('lgErr').hidden = true;
+  try { signedIn(await api(body)); }
+  catch (e) {
+    // a supervisor reset the code: straight to sign-up with the number and name filled in
+    if (body.action === 'login' && e.message.includes('غير مسجّل')) {
+      lgMode(true); $('rgEmp').value = body.emp; $('rgName').value = emp === body.emp ? name : '';
+      setTimeout(() => $('rgCode').focus(), 60);
+      return lgError(emp === body.emp ? 'تمت إعادة تعيين كودك — اختر كوداً جديداً' : e.message);
+    }
+    lgError(e.message);
+  }
+  finally { btn.disabled = false; }
+}
+const digits = v => v.replace(/[٠-٩]/g, c => '٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/\s/g, '');   // Arabic-Indic keyboards
+$('lgLogin').onsubmit = e => {
+  e.preventDefault();
+  const id = emp || digits($('lgEmp').value), code = digits($('lgCode').value);
+  if (!/^\d{3,10}$/.test(id)) return lgError('اكتب رقمك الوظيفي');
+  if (!/^\d{4,8}$/.test(code)) return lgError('الكود من 4 أرقام أو أكثر');
+  lgSubmit({ action: 'login', emp: id, code }, $('lgEnter'));
 };
+$('lgReg').onsubmit = e => {
+  e.preventDefault();
+  const id = digits($('rgEmp').value), nm = $('rgName').value.replace(/\s+/g, ' ').trim();
+  const code = digits($('rgCode').value), code2 = digits($('rgCode2').value);
+  if (!/^\d{3,10}$/.test(id)) return lgError('الرقم الوظيفي أرقام فقط');
+  if (nm.length < 2) return lgError('اكتب اسمك');
+  if (!/^\d{4,8}$/.test(code)) return lgError('الكود من 4 إلى 8 أرقام');
+  if (code !== code2) return lgError('الكودان غير متطابقين');
+  lgSubmit({ action: 'register', emp: id, name: nm, code }, $('rgSave'));
+};
+$('lgToReg').onclick = e => { e.preventDefault(); lgMode(true); };
+$('rgToLogin').onclick = e => { e.preventDefault(); lgMode(false); };
+$('lgOther').onclick = e => {
+  e.preventDefault(); emp = ''; name = ''; store.set('op_emp', ''); store.set('op_name', ''); lgMode(false);
+};
+$('lgAdmin').onclick = e => { e.preventDefault(); $('loginModal').hidden = true; $('adminLink').onclick(e); };
+function account(){
+  if (!token) return askLogin();
+  if (!confirm(`مسجّل باسم ${name} (رقم وظيفي ${emp}).\nتسجيل الخروج؟`)) return;
+  api({ action: 'logout', token }).catch(() => {});
+  token = ''; store.set('op_token', ''); showWho(); render(); askLogin(false);
+}
 function showWho(){
-  $('who').textContent = name ? 'مرحباً، ' + name : 'اضغط لكتابة اسمك';
-  $('avatar').textContent = name ? name.trim()[0] : '؟';
+  $('who').textContent = token ? 'مرحباً، ' + name : 'اضغط لتسجيل الدخول';
+  $('avatar').textContent = token && name ? name.trim()[0] : '؟';
   $('adminLink').hidden = !!pin;
   $('navAdmin').hidden = !pin;
 }
-$('who').onclick = askName; $('avatar').onclick = askName;
+$('who').onclick = account; $('avatar').onclick = account;
 $('adminLink').onclick = e => { e.preventDefault(); $('pinInput').value = ''; $('pinModal').hidden = false; $('pinInput').focus(); };
-$('pinCancel').onclick = () => $('pinModal').hidden = true;
+$('pinCancel').onclick = () => { $('pinModal').hidden = true; if (!token && !pin) askLogin(); };
 $('pinSave').onclick = async () => {
   let d;
   try { d = await api({ action: 'checkpin', pin: $('pinInput').value }); }
@@ -840,7 +1026,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) load
 setInterval(() => { if (!document.hidden && !busy && !pending) load(); }, 60000);
 
 showWho();
-if (!name) askName();
+if (!token && !pin) askLogin();
 load().then(loadGroups);
 </script>
 </body>
