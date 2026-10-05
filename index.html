@@ -177,6 +177,9 @@ details.done-wrap .stack{display:flex;flex-direction:column;gap:10px}
 .selbar input{flex:1;min-width:0;height:44px;border-radius:12px;border:0;padding:0 12px;font-size:16px;color:var(--ink)}
 .selbar .btn.pri{flex:none;background:var(--g);color:var(--edb)}
 .selbar .btn.sec{flex:none;background:rgba(255,255,255,.12);color:#fff}
+.selbar .btn.warn{flex:1;background:var(--tr);color:#fff}
+.tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tools .hint{flex:1;min-width:180px}
 
 /* ---------- bottom nav ---------- */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:1500;display:flex;background:#fff;border-top:1px solid var(--edb10);
@@ -292,7 +295,7 @@ details.done-wrap .stack{display:flex;flex-direction:column;gap:10px}
       <div class="okmsg" id="addMsg"></div>
     </div>
     <div class="seg" id="adminSeg"><button data-m="recent">الأحدث إضافة</button><button data-m="near">الأقرب</button><button data-m="tasks">المهام</button></div>
-    <div class="hint" id="adminHint"></div>
+    <div class="tools" id="adminTools"><div class="hint" id="adminHint"></div><button class="btn sec sm" id="bulkDel">تحديد للحذف</button></div>
     <div id="adminRows" style="display:flex;flex-direction:column;gap:8px"></div>
     <details class="done-wrap" id="adminDoneWrap" hidden><summary id="adminDoneSum"></summary><div class="stack" id="adminDone" style="gap:8px"></div></details>
     <div id="tasksWrap" hidden>
@@ -311,7 +314,8 @@ details.done-wrap .stack{display:flex;flex-direction:column;gap:10px}
 
 <div class="selbar" id="selbar" hidden>
   <div class="top"><b id="selCount"></b><button class="btn sec sm" id="selCancel">إلغاء</button></div>
-  <div class="top"><input id="selName" maxlength="60" placeholder="اسم المهمة (اختياري)"><button class="btn pri" id="selCreate">إنشاء الرابط</button></div>
+  <div class="top" id="selMakeRow"><input id="selName" maxlength="60" placeholder="اسم المهمة (اختياري)"><button class="btn pri" id="selCreate">إنشاء الرابط</button></div>
+  <div class="top" id="selDelRow" hidden><button class="btn warn" id="selDel">حذف المحدد</button></div>
 </div>
 
 <nav class="nav" id="nav">
@@ -385,7 +389,7 @@ let items = [], me = null, busy = false;
 // a special-task link (#g=<id>) shows only that task's stations
 const G = new URLSearchParams(location.hash.slice(1)).get('g') || '';
 let view = 'list', radius = +(store.get('radius') || 0), adminMode = store.get('sort_mode') === 'near' ? 'near' : 'recent';
-let selecting = false; const sel = new Set();
+let selecting = false, selPurpose = 'task'; const sel = new Set();   // selPurpose: 'task' (make a link) or 'delete'
 let sheetId = null, sheetAdmin = false; const arrivedShown = new Set();
 
 // ---------- helpers ----------
@@ -596,17 +600,18 @@ function renderMine(){
 function renderAdmin(){
   $('navAdmin').hidden = !pin;
   if (!pin) return;
-  for (const b of $('adminSeg').children) b.classList.toggle('on', b.dataset.m === (selecting ? 'tasks' : adminMode));
+  for (const b of $('adminSeg').children) b.classList.toggle('on', b.dataset.m === (selecting && selPurpose === 'task' ? 'tasks' : adminMode));
+  $('bulkDel').hidden = selecting;
   const tasks = adminMode === 'tasks' && !selecting;
   $('tasksWrap').hidden = !tasks || !!taskId; $('taskView').hidden = !tasks || !taskId;
-  $('adminRows').hidden = tasks; $('adminHint').hidden = tasks;
+  $('adminRows').hidden = tasks; $('adminTools').hidden = tasks;
   if (tasks) { $('adminDoneWrap').hidden = true; renderTasks(); return; }
   const open = items.filter(s => s.status !== 'done');
   const order = adminMode === 'near' && me
     ? (a, b) => meters(me, a) - meters(me, b)
     : (a, b) => String(b.added_at).localeCompare(String(a.added_at));
   open.sort(order);
-  $('adminHint').textContent = selecting ? 'اضغط على المحطات في الخريطة أو القائمة لتحديدها، ثم «إنشاء الرابط».'
+  $('adminHint').textContent = selecting ? (selPurpose === 'delete' ? 'اضغط على المحطات في الخريطة أو القائمة لتحديدها، ثم «حذف المحدد».' : 'اضغط على المحطات في الخريطة أو القائمة لتحديدها، ثم «إنشاء الرابط».')
     : open.length ? 'اضغط على أي محطة لخياراتها: عاجلة، تأكيد الإنجاز، إلغاء الحجز، حذف.' : 'لا توجد محطات متبقية.';
   const row = s => {
     const st = s.status === 'done' ? `<span class="pill d">تمت</span>` : s.status === 'claimed' ? `<span class="pill c">${esc(s.claimed_by)}</span>` : '';
@@ -799,15 +804,19 @@ $('adminSeg').addEventListener('click', e => {
   if (b.dataset.m === 'tasks') { adminMode = 'tasks'; taskId = null; render(); loadGroups(); return; }
   adminMode = b.dataset.m; store.set('sort_mode', adminMode); render();
 });
-function updSelCount(){ $('selCount').textContent = sel.size ? `محدد: ${stations(sel.size)}` : 'حدد المحطات من الخريطة أو القائمة'; }
+function updSelCount(){
+  $('selCount').textContent = sel.size ? `محدد: ${stations(sel.size)}` : 'حدد المحطات من الخريطة أو القائمة';
+  $('selDel').textContent = sel.size ? `حذف ${stations(sel.size)}` : 'حذف المحدد';
+}
 function toggleSel(s){
   if (!s || s.status === 'done') return;
   sel.has(s.id) ? sel.delete(s.id) : sel.add(s.id);
   updSelCount(); render();
 }
-function setSelecting(on){
-  selecting = on; sel.clear();
+function setSelecting(on, purpose = 'task'){
+  selecting = on; selPurpose = purpose; sel.clear();
   $('selbar').hidden = !on; $('selName').value = ''; updSelCount();
+  $('selMakeRow').hidden = purpose === 'delete'; $('selDelRow').hidden = purpose !== 'delete';
   document.body.style.paddingBottom = on ? 'calc(var(--nav-h) + 150px)' : '';
   setMapBig(on);
   if (on) {
@@ -818,6 +827,15 @@ function setSelecting(on){
   render();
 }
 $('selCancel').onclick = () => setSelecting(false);
+$('bulkDel').onclick = () => setSelecting(true, 'delete');
+// delete several stations: the list updates at once, one request per station goes out in the background
+$('selDel').onclick = () => {
+  if (!sel.size) return toast('حدد محطة واحدة على الأقل');
+  const ids = [...sel], n = ids.length;
+  if (!confirm(`حذف ${stations(n)} من القائمة؟ لا يمكن التراجع.`)) return;
+  setSelecting(false);
+  ids.forEach((id, i) => quick({ action: 'remove', id }, () => { items = items.filter(x => x.id !== id); }, i === n - 1 ? `تم حذف ${stations(n)}` : ''));
+};
 const linkFor = id => location.href.split('#')[0] + '#g=' + id;
 $('selCreate').onclick = async () => {
   if (!sel.size) return toast('حدد محطة واحدة على الأقل');

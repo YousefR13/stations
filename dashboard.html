@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>لوحة التحكم</title>
+<title>متابعة المحطات</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -88,11 +88,57 @@ tr:last-child td{border-bottom:0}
 .modal .row{display:flex;gap:8px;margin-top:14px}
 .modal .row .btn{margin-top:0}
 .btn.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+
+/* ---------- boss view: the summary first, everything else folded away ---------- */
+.live{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:#C9D6F2;position:relative;z-index:1}
+.live i{width:8px;height:8px;border-radius:50%;background:#00FF86;animation:beat 2s infinite}
+.live.stale i{background:#EF9B00;animation:none}
+@keyframes beat{0%{box-shadow:0 0 0 0 rgba(0,255,134,.55)}70%{box-shadow:0 0 0 8px rgba(0,255,134,0)}100%{box-shadow:0 0 0 0 rgba(0,255,134,0)}}
+@media (prefers-reduced-motion:reduce){.live i,.feed li.new{animation:none}}
+.hero{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.hero .top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.hero .pct{font-size:44px;font-weight:700;line-height:1;color:var(--db);font-variant-numeric:tabular-nums}
+.hero .of{font-size:15px;color:var(--muted)}
+.hero .of b{color:var(--ink);font-weight:600}
+.sbar{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--soft)}
+.sbar i{display:block;height:100%;transition:width .6s ease}
+.sbar .d{background:var(--tg)} .sbar .c{background:var(--to)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--soft);border-radius:12px;padding:9px 10px}
+.stat b{display:block;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.stat.g b{color:#00744C} .stat.o b{color:var(--amber)} .stat.r b{color:var(--danger)}
+.rows{display:flex;flex-direction:column}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.prow:last-child{border-bottom:0}
+.prow .nm{font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.prow .fig{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.prow .fig b{color:var(--ink)}
+.prow .sbar{grid-column:1 / -1;height:8px}
+.pill.ok{background:var(--near);color:#00744C}
+.field ul{list-style:none;margin:0;padding:0}
+.field li{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.field li:last-child{border-bottom:0}
+.field .when{color:var(--muted);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.feed li.new{animation:flash 2.4s ease-out}
+@keyframes flash{from{background:#FFF3DC}to{background:transparent}}
+details.more-wrap{margin-top:16px}
+details.more-wrap>summary{cursor:pointer;list-style:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.more-wrap>summary::-webkit-details-marker{display:none}
+details.more-wrap>summary::after{content:"▾";color:var(--muted)}
+details.more-wrap[open]>summary::after{content:"▴"}
+details.more-wrap .seg{background:var(--card);border:1px solid var(--line);margin-top:12px;width:max-content;max-width:100%}
+details.more-wrap .seg button{color:var(--muted)}
+details.more-wrap .seg button.on{background:var(--db);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two section.card{margin-top:12px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="lock" id="lock"><div class="box">
-  <h3>لوحة التحكم</h3><p>أدخل الرمز السري للدخول.</p>
+  <h3>متابعة المحطات</h3><p>أدخل الرمز السري للدخول.</p>
   <input id="pin" type="password" inputmode="numeric" autocomplete="off" autofocus>
   <button class="btn" id="enter">دخول</button>
   <div class="err" id="err"></div>
@@ -102,14 +148,11 @@ tr:last-child td{border-bottom:0}
 
 <header>
   <div class="bar">
-    <h1>لوحة التحكم</h1>
-    <div class="seg" id="period">
-      <button data-p="today" class="on">اليوم</button><button data-p="7">٧ أيام</button><button data-p="30">٣٠ يوم</button><button data-p="all">الكل</button>
-    </div>
+    <h1>متابعة المحطات</h1>
+    <span class="live" id="live"><i></i><span id="liveTxt">مباشر</span></span>
     <button class="icon-btn" id="refresh">↻ تحديث</button>
     <button class="icon-btn" id="logout">خروج</button>
   </div>
-  <div class="updated" id="updated"></div>
   <svg class="wave" viewBox="0 0 400 80" preserveAspectRatio="none" aria-hidden="true">
     <defs><linearGradient id="wg" x1="0" x2="1"><stop offset="0" stop-color="#0027B9" stop-opacity="0"/><stop offset=".45" stop-color="#0080FF"/><stop offset="1" stop-color="#00FF86"/></linearGradient></defs>
     <g fill="none" stroke="url(#wg)" stroke-width=".7">
@@ -119,7 +162,23 @@ tr:last-child td{border-bottom:0}
 </header>
 
 <main>
-  <div class="kpis" id="kpis"></div>
+  <div class="hero" id="hero"></div>
+
+  <div class="two">
+    <section class="card" id="tasksCard" hidden><h2>المهام</h2><div class="rows" id="tasks"></div></section>
+    <section class="card"><h2>المناطق <span class="count">التقدم حسب المنطقة</span></h2><div class="rows" id="areas"></div></section>
+  </div>
+
+  <div class="two">
+    <section class="card field"><h2>في الميدان الآن <span class="count" id="fieldCount"></span></h2><ul id="field"></ul></section>
+    <section class="card"><h2>آخر النشاط</h2><ul class="feed" id="feed"></ul></section>
+  </div>
+
+  <details class="more-wrap" id="moreWrap"><summary>التفاصيل الكاملة: المشرفون والمشغلون وكل المحطات</summary>
+  <div class="seg" id="period">
+    <button data-p="today" class="on">اليوم</button><button data-p="7">٧ أيام</button><button data-p="30">٣٠ يوم</button><button data-p="all">الكل</button>
+  </div>
+  <div class="kpis" id="kpis" style="margin-top:12px"></div>
 
   <div class="grid2" style="margin-top:12px">
     <section class="card">
@@ -146,10 +205,7 @@ tr:last-child td{border-bottom:0}
     <button class="more" id="more" hidden>عرض المزيد</button>
   </section>
 
-  <section class="card">
-    <h2>آخر النشاط</h2>
-    <ul class="feed" id="feed"></ul>
-  </section>
+  </details>
 </main>
 
 <script>
@@ -174,7 +230,16 @@ const fmtDur = ms => {
 };
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
 const STATUS = { open: 'لم يتوجه لها أحد', claimed: 'في الطريق', done: 'تمت' };
-const ACTION = { confirm: 'أكّد إنجاز', add: 'أضاف', remove: 'حذف', urgent: 'جعل عاجلة', normal: 'ألغى العجلة', claim: 'في الطريق إلى', unclaim: 'ألغى الحجز', done: 'أنهى', undo: 'تراجع عن' };
+const ACTION = { confirm: 'أكّد إنجاز', add: 'أضاف', remove: 'حذف', urgent: 'جعل عاجلة', normal: 'ألغى العجلة', claim: 'في الطريق إلى', unclaim: 'ألغى الحجز', done: 'أنهى', undo: 'تراجع عن',
+  group: 'أنشأ مهمة', group_delete: 'حذف مهمة', register: 'سجّل في التطبيق', op_reset: 'أعاد تعيين كود' };
+// districts: a station belongs to the nearest centre within 2.5 km (add districts here as real stations arrive)
+const AREAS = [['العاقول', 24.5170, 39.7149], ['شوران', 24.3953, 39.6236], ['العزيزية', 24.4196, 39.5007], ['سلطانة', 24.4780, 39.5780], ['السيح', 24.4698, 39.5956]];
+const km = (a, b, c, d) => { const r = Math.PI / 180, h = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); };
+const areaOf = i => { let best = null, bd = 2.5; for (const [n, la, lo] of AREAS) { const d = km(+i.lat, +i.lng, la, lo); if (d < bd) { bd = d; best = n; } } return best || 'مناطق أخرى'; };
+const ago = d => { if (!d) return ''; const m = Math.round((Date.now() - d) / 60000); return m < 1 ? 'الآن' : m < 60 ? `قبل ${m} د` : m < 1440 ? `قبل ${Math.floor(m / 60)} س` : fmtTime(d); };
+const stationsAr = n => n === 1 ? 'محطة واحدة' : n === 2 ? 'محطتان' : n >= 3 && n <= 10 ? n + ' محطات' : n + ' محطة';
+const bar = (done, on, total) => `<div class="sbar"><i class="d" style="width:${total ? done / total * 100 : 0}%"></i><i class="c" style="width:${total ? on / total * 100 : 0}%"></i></div>`;
+let lastLoad = 0, seenLog = null;
 
 function since(){
   if (period === 'all') return 0;
@@ -187,10 +252,8 @@ async function load(){
   const res = await fetch(API, { method: 'POST', body: JSON.stringify({ action: 'dashboard', pin }) });
   const d = await res.json();
   if (d.error) throw new Error(d.error);
-  data = d;
-  $('updated').textContent = 'عرض فقط'
-    + ' · آخر تحديث: ' + new Date().toLocaleTimeString('ar-SA', { hour: 'numeric', minute: '2-digit' });
-  fillSupervisors(); render();
+  data = d; lastLoad = Date.now(); tick();
+  fillSupervisors(); renderBoss(); render();
 }
 
 function fillSupervisors(){
@@ -199,6 +262,61 @@ function fillSupervisors(){
   $('fSup').innerHTML = '<option value="">كل المشرفين</option>' + sups.map(s => `<option>${esc(s)}</option>`).join('');
   $('fSup').value = sups.includes(cur) ? cur : '';
 }
+
+// the part the boss reads: overall, tasks, districts, who is out now, latest activity
+function renderBoss(){
+  const items = data.items, total = items.length;
+  const done = items.filter(i => i.status === 'done'), on = items.filter(i => i.status === 'claimed');
+  const left = total - done.length - on.length, urgent = items.filter(i => i.priority === 'high' && i.status !== 'done').length;
+  const day0 = new Date(); day0.setHours(0, 0, 0, 0);
+  const today = done.filter(i => +t(i.done_at) >= +day0).length;
+  $('hero').innerHTML = `<div class="top"><span class="pct">${total ? Math.round(done.length / total * 100) : 0}%</span>
+      <span class="of"><b>${done.length}</b> من <b>${total}</b> محطة تمت</span></div>
+    ${bar(done.length, on.length, total)}
+    <div class="stats"><div class="stat g"><b>${today}</b><span>تمت اليوم</span></div><div class="stat o"><b>${on.length}</b><span>في الطريق الآن</span></div>
+      <div class="stat"><b>${left}</b><span>لم يتوجه لها أحد</span></div><div class="stat ${urgent ? 'r' : ''}"><b>${urgent}</b><span>عاجلة متبقية</span></div></div>`;
+
+  // tasks (special-task links), newest first
+  const byId = new Map(items.map(i => [String(i.id), i]));
+  const groups = (data.groups || []).map(g => { const its = g.ids.map(x => byId.get(String(x))).filter(Boolean);
+    return { ...g, n: its.length, d: its.filter(i => i.status === 'done').length, c: its.filter(i => i.status === 'claimed').length }; }).filter(g => g.n).reverse();
+  $('tasksCard').hidden = !groups.length;
+  $('tasks').innerHTML = groups.map(g => `<div class="prow"><span class="nm">${esc(g.name || 'مهمة خاصة')}</span>
+    <span class="fig"><b>${g.d}</b> من ${g.n}${g.c ? ` · ${g.c} في الطريق` : ''}</span>${bar(g.d, g.c, g.n)}</div>`).join('');
+
+  // districts, the ones that need help first
+  const ar = {};
+  for (const i of items) { const k = areaOf(i), a = ar[k] = ar[k] || { n: 0, d: 0, c: 0 }; a.n++; if (i.status === 'done') a.d++; if (i.status === 'claimed') a.c++; }
+  const rows = Object.entries(ar).map(([k, a]) => ({ k, ...a, p: a.d / a.n, left: a.n - a.d - a.c }))
+    .sort((x, y) => (x.k === 'مناطق أخرى') - (y.k === 'مناطق أخرى') || x.p - y.p);
+  const tag = a => a.p < 0.3 && a.left >= 5 ? '<span class="pill red">تحتاج دعم</span>' : a.p < 0.6 ? '<span class="pill claimed">متابعة</span>' : '<span class="pill ok">على المسار</span>';
+  $('areas').innerHTML = rows.length ? rows.map(a => `<div class="prow"><span class="nm">${esc(a.k)} ${tag(a)}</span>
+    <span class="fig"><b>${a.d}</b> من ${a.n} · ${Math.round(a.p * 100)}%</span>${bar(a.d, a.c, a.n)}</div>`).join('') : '<div class="empty">لا توجد محطات بعد</div>';
+
+  // operators on their way right now
+  const field = on.slice().sort((a, b) => t(b.claimed_at) - t(a.claimed_at));
+  $('fieldCount').textContent = field.length ? stationsAr(field.length) : '';
+  $('field').innerHTML = field.length ? field.slice(0, 8).map(i => `<li><span><b>${esc(i.claimed_by)}</b> ← <span dir="ltr">S${esc(i.station)}</span> · ${esc(areaOf(i))}</span><span class="when">${ago(t(i.claimed_at))}</span></li>`).join('')
+    + (field.length > 8 ? `<li class="empty">و${stationsAr(field.length - 8)} أخرى</li>` : '') : '<li class="empty">لا يوجد مشغل في الطريق الآن</li>';
+
+  // latest activity; lines that arrived since the last refresh flash once
+  const log = (data.log || []).slice(0, 10), key = l => l.time + l.action + l.station + l.who;
+  const fresh = seenLog ? new Set(log.filter(l => !seenLog.has(key(l))).map(key)) : new Set();
+  seenLog = new Set((data.log || []).map(key));
+  $('feed').innerHTML = log.length ? log.map(l => {
+    const st = l.station !== '' && !isNaN(Number(l.station)) ? ` <b dir="ltr">S${esc(l.station)}</b>` : l.station ? ` ${esc(l.station)}` : '';
+    return `<li class="${fresh.has(key(l)) ? 'new' : ''}"><time>${ago(t(l.time))}</time><span><b>${esc(String(l.who).replace(/^المشرف: /, ''))}</b> ${ACTION[l.action] || esc(l.action)}${st}${l.note && l.action !== 'add' ? ` <span class="muted">· ${esc(l.note)}</span>` : ''}</span></li>`;
+  }).join('') : '<li class="empty">لا يوجد نشاط بعد</li>';
+}
+
+// the "live" label: time since the last successful refresh
+function tick(){
+  if (!lastLoad) return;
+  const sec = Math.round((Date.now() - lastLoad) / 1000);
+  $('live').classList.toggle('stale', sec > 90);
+  $('liveTxt').textContent = sec < 10 ? 'مباشر · محدّث الآن' : sec < 60 ? `مباشر · قبل ${sec} ث` : `آخر تحديث قبل ${Math.floor(sec / 60)} د`;
+}
+setInterval(tick, 5000);
 
 function render(){
   const from = since(), items = data.items;
@@ -272,10 +390,6 @@ function render(){
       }).join('')
     : '<tr><td class="empty">لا توجد محطات مطابقة</td></tr>';
   $('more').hidden = rows.length <= shown;
-
-  $('feed').innerHTML = (data.log || []).length
-    ? data.log.slice(0, 25).map(l => `<li><time>${fmtTime(t(l.time))}</time><span><b>${esc(l.who)}</b> ${ACTION[l.action] || esc(l.action)} <b dir="ltr">S${esc(l.station)}</b>${l.note ? ` <span class="muted">· ${esc(l.note)}</span>` : ''}</span></li>`).join('')
-    : '<li class="empty">لا يوجد نشاط بعد</li>';
 }
 
 async function enter(){
@@ -289,7 +403,7 @@ async function enter(){
 $('enter').onclick = enter;
 $('pin').addEventListener('keydown', e => { if (e.key === 'Enter') enter(); });
 $('logout').onclick = () => { ss.set('dash_pin', ''); pin = ''; $('pin').value = ''; $('lock').hidden = false; };
-$('refresh').onclick = () => load().catch(e => alert(e.message));
+$('refresh').onclick = () => load().catch(e => { $('liveTxt').textContent = 'تعذّر التحديث: ' + e.message; });
 $('period').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   period = b.dataset.p; shown = 50;
@@ -298,7 +412,9 @@ $('period').addEventListener('click', e => {
 });
 ['q', 'fStatus', 'fSup'].forEach(id => $(id).addEventListener('input', () => { shown = 50; render(); }));
 $('more').onclick = () => { shown += 50; render(); };
-setInterval(() => { if (pin && !document.hidden) load().catch(() => {}); }, 120000);
+// live: refresh every 30 s while the page is open, and right away when it comes back to the front
+setInterval(() => { if (pin && !document.hidden) load().catch(() => {}); }, 30000);
+document.addEventListener('visibilitychange', () => { if (pin && !document.hidden && Date.now() - lastLoad > 15000) load().catch(() => {}); });
 
 if (pin) load().then(() => $('lock').hidden = true).catch(() => { pin = ''; ss.set('dash_pin', ''); });
 </script>
